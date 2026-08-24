@@ -323,8 +323,14 @@ function render(){
     });
   }
 
+  // Nur echte Startplaetze zaehlen. Zwei Bankspieler in derselben Bye-Woche
+  // sind voellig belanglos - sie spielen ohnehin nicht. Vorher lief der ganze
+  // Kader in die Zaehlung und meldete Konflikte, die keine waren.
   const myByes = {};
-  myTeam().forEach(p => { if (["RB","WR","TE","QB"].includes(p.pos)) myByes[p.bye] = (myByes[p.bye]||0)+1; });
+  fillSlots().slots.forEach(sl => {
+    if (sl.p && ["RB","WR","TE","QB"].includes(sl.p.pos))
+      myByes[sl.p.bye] = (myByes[sl.p.bye] || 0) + 1;
+  });
 
   const shown = pool.slice(0, 90);
   let html = "", lastTier = null;
@@ -382,8 +388,10 @@ function render(){
 
   const clash = Object.entries(myByes).filter(([, c]) => c >= 2);
   byes.innerHTML = clash.length
-    ? clash.map(([w, c]) => '<div class="warnrow">Week ' + w + ": " + c + " Starter gleichzeitig raus</div>").join("")
-    : '<div class="note">Keine Häufung. Ab 2 Startern pro Bye wird gewarnt.</div>';
+    ? clash.map(([w, c]) => '<div class="warnrow">Week ' + w + ": " + c +
+        (c >= 3 ? " Starter raus - das kostet ein Spiel" : " Starter raus - verkraftbar") +
+        "</div>").join("")
+    : '<div class="note">Keine Häufung unter den Startern. Bankspieler zählen nicht.</div>';
 
   // Fenster der letzten 8 Picks: ein Run ist, wenn die Haelfte davon dieselbe
   // Position trifft. Ueber 12 Picks verwaessert das Signal zu stark.

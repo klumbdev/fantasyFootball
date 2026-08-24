@@ -63,41 +63,6 @@ deines Slots:
 - **Dominik** zieht die erste Defense (R7), **Saison-Out** den ersten Kicker (R11). Beides ignorieren.
 - **peter** (Meister) und **Lukas** (Dritter) warteten am laengsten auf ihren QB.
 
-## Sicherheitsnetz: Yahoos Pre-Draft-Ranks
-
-`yahoo_predraft.csv` ist unsere Board-Rangfolge als Yahoo-Importdatei. Sie ist
-Yahoos **Autopick-Liste**: Laeuft die 45-Sekunden-Uhr ab oder bricht die
-Verbindung, nimmt Yahoo den besten verfuegbaren Spieler daraus statt nach
-eigenem XRank.
-
-Importieren: Draft → Pre-Draft Rankings → *Edit My Rankings* → **Import** →
-Datei auswaehlen → **Save**. Danach oben rechts pruefen, dass gespeichert wurde.
-
-Was die Liste absichert - und was nicht:
-
-| Abgesichert | Bleibt deine Aufgabe |
-|---|---|
-| Kein zweiter frueher QB (alle ausser Allen 25 Plaetze zurueck) | Bye-Week-Ballungen |
-| Kicker und Defenses erst ab Rang 185 | Reaktion auf Positionslaeufe |
-| Kreuzband-Faelle ganz unten (224-230) | Doppelpicks an der Wende |
-| Jeanty auf 34 statt 24 wegen der Sprunggelenk-Meldung | |
-
-Die Liste ist statisch - sie kennt deinen Kaderstand nicht. Sie ist der
-Fallschirm, nicht das Steuer.
-
-### Do Not Draft: `yahoo_do_not_draft.csv` - genau 7 Namen
-
-Nabers, Alec Pierce, Kraft, Mahomes, Kittle, Charbonnet, Tank Dell. Alle mit
-Kreuzband, Achillessehne oder PUP - keiner davon hilft dir 2026.
-
-**Bewusst kurz.** Yahoos Do-Not-Draft ist absolut: Wer daraufsteht, wird nie
-gezogen, egal wie tief er faellt. "Zu teuer bei ADP 31" - McMillan, Jaylen
-Warren, Josh Jacobs - gehoert deshalb NICHT auf diese Liste, sondern wird
-schon durch die Rangfolge erledigt. In Runde 12 waeren die drei ein guter Zug,
-und den will man sich nicht verbauen.
-
-Beide Dateien neu erzeugen: `python3 tools/export_predraft.py`
-
 ## Merksaetze
 
 1. Dem violetten Feld folgen — die Zweitwahl kostet im Schnitt fast nichts, Eigensinn ist erlaubt.
