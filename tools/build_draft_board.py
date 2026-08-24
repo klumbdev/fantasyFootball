@@ -211,6 +211,24 @@ def main():
         if fehlt:
             print("    aus den Top 60 nicht zugeordnet:", ", ".join(fehlt))
 
+    # Wann eine Position in DIESER Liga wirklich vom Board geht. Die nationale
+    # ADP taugt dafuer nur bei RB und WR; QB, TE, K und DEF gehen hier deutlich
+    # frueher. Zuordnung ueber den Rang innerhalb der Position, nicht ueber den
+    # ADP-Wert - sonst extrapoliert man in negative Picknummern.
+    lo = ROOT / "tools" / "league_offset.json"
+    if lo.exists():
+        hist = json.loads(lo.read_text())
+        for pos, info in hist.items():
+            grp = sorted([p for p in players if p["pos"] == pos], key=lambda x: x["adp"])
+            picks, step = info["picks"], info["step"]
+            for k, p in enumerate(grp):
+                p["ladp"] = (picks[k] if k < len(picks)
+                             else picks[-1] + step * (k - len(picks) + 1))
+                # Eine einzelne Vorsaison ist eine duenne Basis. Je groesser die
+                # Korrektur, desto unsicherer - das kommt in die Streuung.
+                p["lstdev"] = round((p["stdev"] ** 2 + (0.4 * abs(p["ladp"] - p["adp"])) ** 2) ** 0.5, 2)
+        print(f"  Liga-Timing: {sum(1 for p in players if 'ladp' in p)} Spieler kalibriert")
+
     tier_up(players)
     players.sort(key=lambda p: p["adp"])
 

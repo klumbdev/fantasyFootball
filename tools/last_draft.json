@@ -1,0 +1,28 @@
+{
+  "_source": "Football Fanatics 2, Draft Results 2025, 8 Teams x 15 Runden",
+  "_note": "Positionen in Pickreihenfolge je Runde. Zeigt, wie diese Liga wirklich draftet - nicht wie der Markt es tut.",
+  "rounds": [
+    ["WR","RB","RB","WR","RB","RB","RB","WR"],
+    ["RB","WR","QB","WR","WR","RB","WR","RB"],
+    ["QB","WR","WR","RB","RB","RB","RB","QB"],
+    ["WR","RB","RB","TE","RB","TE","WR","TE"],
+    ["WR","QB","QB","WR","WR","WR","QB","RB"],
+    ["WR","TE","WR","RB","WR","WR","TE","RB"],
+    ["RB","RB","DST","RB","RB","TE","WR","TE"],
+    ["RB","DST","DST","WR","QB","RB","WR","WR"],
+    ["RB","WR","WR","WR","QB","WR","WR","RB"],
+    ["WR","WR","RB","WR","TE","WR","QB","QB"],
+    ["DST","DST","RB","WR","WR","WR","K","QB"],
+    ["WR","TE","K","K","RB","TE","K","WR"],
+    ["TE","K","K","RB","TE","DST","RB","DST"],
+    ["K","K","K","K","K","QB","TE","RB"],
+    ["K","TE","RB","DST","DST","WR","WR","RB"]
+  ],
+  "notable": {
+    "erster QB": "Runde 2, Pick 11 (Lamar Jackson)",
+    "Josh Allen": "Runde 3, Pick 17",
+    "erster TE": "Runde 4, Pick 28 (Brock Bowers)",
+    "erste DEF": "Runde 7, Pick 51 (Broncos)",
+    "erster K": "Runde 11, Pick 87 (Chris Boswell)"
+  }
+}

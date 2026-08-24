@@ -242,8 +242,11 @@ function erf(x){
 const cdf = (x, mu, sd) => 0.5 * (1 + erf((x - mu) / (Math.max(sd, 0.1) * Math.SQRT2)));
 function survival(p, n){
   if (!n) return null;
-  const taken = cdf(n - 0.5, p.adp, p.stdev) - cdf(0.5, p.adp, p.stdev);
-  return Math.max(0, Math.min(1, 1 - taken / Math.max(1e-9, 1 - cdf(0.5, p.adp, p.stdev))));
+  // Gegen das Verhalten DIESER Liga rechnen, nicht gegen den Marktdurchschnitt.
+  const adp = p.ladp != null ? p.ladp : p.adp;
+  const sd  = p.ladp != null ? p.lstdev : p.stdev;
+  const taken = cdf(n - 0.5, adp, sd) - cdf(0.5, adp, sd);
+  return Math.max(0, Math.min(1, 1 - taken / Math.max(1e-9, 1 - cdf(0.5, adp, sd))));
 }
 
 /* ---- Zustand ---- */
@@ -474,6 +477,11 @@ function marginal(pos, open, mine){
 
 function recommend(){
   const n = pickNo(), next = myNext(), open = needs();
+  // Bist du am Zug, ist "ist er jetzt da" keine Frage - er steht ja vor dir.
+  // Die Entscheidung haengt daran, wen du bis zum UEBERNAECHSTEN Zug verlierst.
+  // Ohne diesen Horizont waere die ganze Wartelogik im Moment der Entscheidung
+  // wirkungslos.
+  const horizon = myPicks().find(p => p > n) || null;
   const want = planFor(roundOf(n))[4].filter(p => open[p] || open.FLEX);
   const runPos = (() => {
     const l = S.order.slice(-8).map(i => P.find(p => p.id === i)).filter(Boolean);
@@ -503,36 +511,38 @@ function recommend(){
   if (!pool.length) return null;
 
   const scored = pool.map(p => {
-    const sv = mine ? null : (survival(p, next) ?? 0);
+    const sv = survival(p, mine ? horizon : next) ?? 0;
     const falling = p.adp <= n - T * 0.5;
-    // Rang = wie aussagekraeftig der Grund ist. Der beste wird angezeigt.
     const why = [];
     const add = (rank, text) => why.push([rank, text]);
-    // Kleiner ist besser. VOR wird in eine ADP-aehnliche Skala gedreht, damit
-    // Spieler ohne Projektion (tiefe Bank, K, DEF) vergleichbar bleiben.
     const mrg = marginal(p.pos, open, roster);
-    // Durch den Grenznutzen teilen: ein Backup-QB rutscht damit um ein
-    // Vielfaches nach hinten, statt nur ein paar Plaetze.
-    let sc = (p.vorRank ? p.vorRank : p.adp + 40) / mrg;
-    if (mrg < 0.5) add(7, "nur Bankwert - " + p.pos + " ist bei dir besetzt");
-    if (sv !== null){
-      sc += sv * 14;                       // wer knapp durchkommt, ist der dringendere Zug
-      if (sv < .55) add(1, "kommt nur mit " + Math.round(sv * 100) + "% bis zu deinem Pick durch");
-      else add(3, "voraussichtlich noch da (" + Math.round(sv * 100) + "%)");
-    }
-    if (falling) { sc -= 4; add(2, "fällt " + Math.round(n - p.adp) + " Picks unter seine ADP"); }
-    if (p.ldelta >= 4) { sc -= 3; add(4, "geht in eurer Liga rund " + Math.round(p.ldelta) + " Picks früher als die ADP"); }
-    if (p.vor != null && p.adp && p.vorRank && p.adp - p.vorRank >= 8)
-      { sc -= 4; add(2, "Mehrwert von " + Math.round(p.vor) + " Punkten - der Markt zieht ihn " + Math.round(p.adp - p.vorRank) + " Plaetze zu spaet"); }
-    if (runPos === p.pos && open[p.pos]) { sc -= 5; add(4, "Run auf " + p.pos + " läuft und du brauchst die Position"); }
-    if (runPos && runPos !== p.pos) { sc -= 3; add(5, "die anderen räumen " + runPos + " leer, hier bleibt Wert liegen"); }
-    if (open[p.pos]) { sc -= 6 / mrg; add(6, "Startplatz " + p.pos + " noch offen"); }
     const clash = byeLoad[p.bye] || 0;
-    if (clash >= 2 && marginal(p.pos, open, roster) >= 0.85){
-      sc += clash * 6;                       // nur fuer Starter relevant
-      add(8, "Bye " + p.bye + " - dann fehlen dir schon " + clash + " Starter");
+
+    // Alle Zuschlaege wirken multiplikativ, nicht als feste Abzuege. Sonst
+    // reisst ein Bonus von wenigen Punkten die Spitze durcheinander, wo die
+    // Spieler nur ein bis zwei Raenge auseinanderliegen, waehrend er in
+    // Runde 12 wirkungslos bliebe. Kleiner ist besser.
+    let sc = p.vorRank ? p.vorRank : p.adp + 40;
+    sc /= mrg;                                   // besetzte Position entwertet stark
+    if (mrg < 0.5) add(7, "nur Bankwert - " + p.pos + " ist bei dir besetzt");
+
+    if (sv !== null && horizon !== null){
+      sc *= 1 + sv * 0.9;                        // wer sicher durchkommt, kann warten
+      const bis = mine ? "bis Pick " + horizon : "bis zu deinem Pick";
+      if (sv < .55) add(1, "nur " + Math.round(sv * 100) + "% dass er " + bis + " überlebt");
+      else add(3, "wäre " + bis + " voraussichtlich noch da (" + Math.round(sv * 100) + "%)");
     }
-    if (p.sev === "risk") { sc += 8; add(0, "angeschlagen (" + p.injNote + "), trotzdem der beste Zug"); }
+    if (open[p.pos]) { sc *= 0.85; add(6, "Startplatz " + p.pos + " noch offen"); }
+    if (falling)     { sc *= 0.88; add(2, "fällt " + Math.round(n - p.adp) + " Picks unter seine ADP"); }
+    if (p.ldelta >= 4) { sc *= 0.93;
+      add(5, "geht in eurer Liga rund " + Math.round(p.ldelta) + " Picks früher als die ADP"); }
+    if (p.vor != null && p.adp && p.vorRank && p.adp - p.vorRank >= 8){ sc *= 0.90;
+      add(4, "Mehrwert von " + Math.round(p.vor) + " Punkten - der Markt zieht ihn zu spät"); }
+    if (clash >= 2 && mrg >= 0.85){ sc *= 1 + clash * 0.14;
+      add(8, "Bye " + p.bye + " - dann fehlen dir schon " + clash + " Starter"); }
+    if (p.sev === "risk"){ sc *= 1.30;
+      add(0, "angeschlagen (" + p.injNote + "), trotzdem der beste Zug"); }
+
     why.sort((a, b) => a[0] - b[0]);
     return { p, sc, why: why.map(w => w[1]), sv };
   }).sort((a, b) => a.sc - b.sc);
