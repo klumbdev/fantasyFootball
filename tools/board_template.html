@@ -351,9 +351,9 @@ function render(){
       '<div class="row' + (p.sev === "out" ? " isout" : "") +
         '" onclick="rowClick(event,' + p.id + ')">' +
         '<div class="adp num">' + p.adpFmt + "</div>" +
-        '<div><div class="nm">' + p.name +
+        '<div><div class="nm">' + (p.yname || p.name) +
           '<span class="pos ' + p.pos + '">' + p.pos + p.pos_rank + "</span>" + chips + "</div>" +
-          '<div class="meta">' + p.team + " · Bye " + p.bye + " · Tier " + p.tier +
+          '<div class="meta">' + p.name + " · " + p.team + " · Bye " + p.bye + " · Tier " + p.tier +
             (p.age ? " · " + p.age + "J" : "") +
             (p.depth ? " · DC" + p.depth : "") +
             (p.vor != null ? " · VOR " + Math.round(p.vor) + " (#" + p.vorRank + ")" : " · n=" + p.n) + "</div></div>" +
@@ -369,9 +369,9 @@ function render(){
   const { slots, bench } = fillSlots();
   roster.innerHTML =
     slots.map(s => '<div class="slot"><span class="lbl">' + s.lbl + "</span>" +
-      (s.p ? "<span>" + s.p.name + '</span><span style="color:var(--faint);font-size:11px">' + s.p.team + " B" + s.p.bye + "</span>"
+      (s.p ? "<span>" + (s.p.yname || s.p.name) + '</span><span style="color:var(--faint);font-size:11px">' + s.p.team + " B" + s.p.bye + "</span>"
            : '<span class="empty">offen</span><span></span>') + "</div>").join("") +
-    bench.map(p => '<div class="slot"><span class="lbl">BN</span><span>' + p.name +
+    bench.map(p => '<div class="slot"><span class="lbl">BN</span><span>' + (p.yname || p.name) +
       '</span><span style="color:var(--faint);font-size:11px">' + p.pos + " B" + p.bye + "</span></div>").join("");
   needsEl.innerHTML = Object.entries(open).map(([k, v]) =>
     '<span class="' + (v > 1 ? "urgent" : "") + '">' + k + " ×" + v + "</span>").join("") ||
@@ -405,14 +405,14 @@ function render(){
     recEl.className = mine ? "" : "wait";
     recEl.innerHTML =
       '<div class="lbl">' + (mine ? "Du bist dran<br>nimm" : "Pick " + next + "<br>in " + (next - n)) + "</div>" +
-      '<div class="mid"><div class="who">' + p.name +
+      '<div class="mid"><div class="who">' + (p.yname || p.name) +
         ' <span class="pos ' + p.pos + '">' + p.pos + p.pos_rank + "</span></div>" +
         '<div class="why">' + why[0].toUpperCase() + why.slice(1) +
         (R.top.why.length > 1 ? " · " + R.top.why[1] : "") +
         "</div></div>" +
       '<div class="alts">' + R.alts.map(a =>
         '<div class="alt" onclick="draft(' + a.p.id + ',true)">' +
-          '<b>' + a.p.name + '</b> <span class="pos ' + a.p.pos + '">' + a.p.pos + a.p.pos_rank + "</span>" +
+          '<b>' + (a.p.yname || a.p.name) + '</b> <span class="pos ' + a.p.pos + '">' + a.p.pos + a.p.pos_rank + "</span>" +
           '<span class="ar">' + (a.why[0] || "solide Alternative") + "</span></div>").join("") + "</div>" +
       '<button onclick="draft(' + p.id + ',true)">nehmen</button>';
   } else recEl.innerHTML = "";

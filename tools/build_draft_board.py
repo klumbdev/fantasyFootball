@@ -136,6 +136,12 @@ def main():
             "depth": s.get("depth_chart_order"),
             "inj": s.get("injury_status"),
             "alias": NICKNAMES.get((r["team"] or "").upper()) if pos == "DST" else None,
+            # Schreibweise wie im Yahoo-Draftraum. Waehrend des Drafts liest man
+            # dort ab, also muss hier dasselbe stehen - der volle Name bleibt
+            # eine Zeile darunter.
+            "yname": (NICKNAMES.get((r["team"] or "").upper()) if pos == "DST"
+                      else (r["name"].split()[0][0] + ". " + " ".join(r["name"].split()[1:]))
+                      if len(r["name"].split()) > 1 else r["name"]),
         })
     print(f"  {matched}/{len(raw)} mit Sleeper-Daten angereichert")
 
