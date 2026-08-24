@@ -52,6 +52,9 @@ draft_board.html            erzeugt — das Werkzeug für den Draft
 tools/build_draft_board.py  holt Daten, verknüpft Quellen, rendert das Board
 tools/board_template.html   Markup, Gestaltung, Draftlogik
 tools/parse_projections.py  liest Yahoos Projektionstabelle aus gespeicherten Seiten
+tools/simulate_draft.js     spielt komplette Drafts durch und prüft die Kader
+tools/last_draft.json       Draftboard der Vorsaison, Positionen je Runde
+tools/league_offset.json    erzeugt — wann welche Position in dieser Liga geht
 tools/yahoo_auth_test.py    OAuth-Flow, prüft ob Fantasy-Zugriff freigeschaltet ist
 tools/injuries.json         Verletzungsreport der Liga, von Hand gepflegt
 tools/yahoo_rank.json       Yahoos liga-eigene Top 25
@@ -194,6 +197,72 @@ Tyler Warren (Leiste, TE, 72).
 
 ---
 
+## Wie diese Liga wirklich draftet
+
+Aus dem vollständigen Draftboard der Vorsaison. Die wichtigste Erkenntnis des
+Tages, weil sie die nationale ADP an vier von sechs Positionen widerlegt.
+
+| Position | erster Pick | Hälfte weg bis | gesamt gedraftet | Versatz zur ADP |
+|---|---|---|---|---|
+| WR | 1 | 55 | 39 | **+0,5** |
+| RB | 2 | 48 | 34 | **+0,5** |
+| QB | **11** | 61 | 12 | **−23** |
+| TE | **28** | 77 | 14 | **−30** |
+| DEF | **51** | 82 | 9 | **−29** |
+| K | **87** | 105 | 12 | **−45** |
+
+RB und WR gehen exakt im Markttempo. Alles andere geht früher — QB und TE
+deutlich. Lamar Jackson ging in Runde 2 bei Pick 11, Josh Allen bei 17, der
+erste Tight End bei 28.
+
+Das Board rechnet die Überlebenswahrscheinlichkeit deshalb gegen diese Zeiten,
+nicht gegen die ADP. Zuordnung über den **Rang innerhalb der Position** — der
+k-beste QB geht dort, wo letztes Jahr der k-beste QB ging. Eine lineare
+Anpassung an den ADP-Wert war der erste Versuch und ergab für Allen einen
+Liga-Pick von −0,6, also eine negative Picknummer.
+
+Weil eine einzelne Vorsaison eine dünne Basis ist, geht die Größe der Korrektur
+in die Streuung ein: Je stärker der Eingriff, desto unsicherer die Aussage.
+Allen kommt so auf Liga-Pick 11 ± 11 statt ADP 33 ± 7.
+
+## Prüfung
+
+`node tools/simulate_draft.js` spielt 400 vollständige Drafts durch — acht
+Slots, fünfzig Läufe je Slot — und prüft jeden entstandenen Kader. Die Gegner
+draften nach der Positionsverteilung der Vorsaison, nicht nach ADP.
+
+**Ergebnis: keine Regelverstöße.** Es entstehen nur zwei Kaderformen:
+
+| QB-RB-WR-TE-K-DST | Anteil |
+|---|---|
+| 1-6-5-1-1-1 | 61 % |
+| 1-5-6-1-1-1 | 39 % |
+
+Immer genau ein QB, ein TE, ein Kicker, eine Defense. Kein offener Startplatz,
+kein dauerhaft Verletzter im Kader, kein Kicker vor Runde 12.
+
+`node tools/simulate_draft.js compare` misst die Punkte der Startaufstellung
+gegen zwei einfachere Strategien, je zwanzig Drafts pro Slot:
+
+| Strategie | Punkte |
+|---|---|
+| **Board** | **1683** |
+| nur VOR, ohne Bedarf und Timing | 1650 |
+| nur nach ADP | 1396 |
+
+Der Vorsprung auf die reine ADP-Reihenfolge beträgt rund 287 Punkte über die
+Saison, gut 17 pro Woche, und er ist über alle acht Slots stabil.
+
+### Was in der Simulation typischerweise passiert
+
+| Spieler | Median-Runde | früh | spät |
+|---|---|---|---|
+| J. Gibbs | 1 | 1 | 1 |
+| J. Chase | 1 | 1 | 2 |
+| J. Allen | 2 | 1 | 4 |
+| T. McBride | 4 | 2 | 4 |
+| B. Bowers | 4 | 4 | 14 |
+
 ## Fehler, die aufgetreten sind
 
 Festgehalten, weil sie sich wiederholen können.
@@ -211,7 +280,16 @@ Festgehalten, weil sie sich wiederholen können.
 5. **Vier QBs und drei TEs im Mock-Kader.** VOR misst den Wert für einen
    *Startplatz* und meldet ihn weiter, auch wenn der Platz vergeben ist. Ohne
    Grenznutzen empfiehlt das Board endlos Ersatzleute.
-6. **Liga-PDFs im öffentlichen Repo.** `git add -A` hat sie eingesammelt. Sie
+6. **Wahrscheinlichkeit lief bei der Entscheidung nicht mit.** Sobald man am
+   Zug war, setzte die Empfehlung sie auf `null` — mit dem Argument, dass
+   ohnehin alle Verfügbaren vor einem liegen. Richtig, aber die falsche Frage:
+   Es zählt, wen man bis zum *nächsten* eigenen Zug verliert. Die gesamte
+   Wartelogik war damit im Moment der Entscheidung wirkungslos.
+7. **Absolute statt anteilige Zuschläge.** Boni von −3 und −4 Punkten auf eine
+   Skala, auf der die Spitze ein bis zwei Ränge auseinanderliegt. Josh Allen
+   rutschte dadurch von Rang 10 vor Ja'Marr Chase auf Rang 4. Alle Zuschläge
+   wirken jetzt multiplikativ.
+8. **Liga-PDFs im öffentlichen Repo.** `git add -A` hat sie eingesammelt. Sie
    enthalten Namen der Mitspieler und die Kader der Vorsaison. Aus dem
    aktuellen Stand entfernt, in der Historie unter `d3d9741` noch vorhanden.
 
