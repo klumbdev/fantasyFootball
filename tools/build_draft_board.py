@@ -121,6 +121,18 @@ def main():
     if missing:
         print("    ausserhalb der ADP-Liste:", ", ".join(missing))
 
+    # Yahoos liga-eigene Rangliste ueberlagern. Sie ist auf die Scoring-Settings
+    # gerechnet und ist zugleich die Liste, nach der die Mitspieler draften -
+    # eine grosse Abweichung zur ADP sagt also voraus, wann jemand WIRKLICH geht.
+    yr = json.loads((ROOT / "tools" / "yahoo_rank.json").read_text())["ranks"]
+    yrank = {norm(n): i + 1 for i, n in enumerate(yr)}
+    for p in players:
+        r = yrank.get(norm(p["name"]))
+        if r:
+            p["lrank"] = r
+            p["ldelta"] = round(p["adp"] - r, 1)   # positiv = geht frueher als ADP
+    print(f"  Liga-Rangliste: {sum(1 for p in players if p.get('lrank'))}/{len(yr)} zugeordnet")
+
     tier_up(players)
     players.sort(key=lambda p: p["adp"])
 
