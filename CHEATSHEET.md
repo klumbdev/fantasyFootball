@@ -63,6 +63,29 @@ deines Slots:
 - **Dominik** zieht die erste Defense (R7), **Saison-Out** den ersten Kicker (R11). Beides ignorieren.
 - **peter** (Meister) und **Lukas** (Dritter) warteten am laengsten auf ihren QB.
 
+## Sicherheitsnetz: Yahoos Pre-Draft-Ranks
+
+`yahoo_predraft.csv` ist unsere Board-Rangfolge als Yahoo-Importdatei. Sie ist
+Yahoos **Autopick-Liste**: Laeuft die 45-Sekunden-Uhr ab oder bricht die
+Verbindung, nimmt Yahoo den besten verfuegbaren Spieler daraus statt nach
+eigenem XRank.
+
+Importieren: Draft → Pre-Draft Rankings → *Edit My Rankings* → **Import** →
+Datei auswaehlen → **Save**. Danach oben rechts pruefen, dass gespeichert wurde.
+
+Was die Liste absichert - und was nicht:
+
+| Abgesichert | Bleibt deine Aufgabe |
+|---|---|
+| Kein zweiter frueher QB (alle ausser Allen 25 Plaetze zurueck) | Bye-Week-Ballungen |
+| Kicker und Defenses erst ab Rang 185 | Reaktion auf Positionslaeufe |
+| Kreuzband-Faelle ganz unten (224-230) | Doppelpicks an der Wende |
+| Jeanty auf 34 statt 24 wegen der Sprunggelenk-Meldung | |
+
+Die Liste ist statisch - sie kennt deinen Kaderstand nicht. Sie ist der
+Fallschirm, nicht das Steuer. Neu erzeugen mit
+`python3 tools/export_predraft.py`.
+
 ## Merksaetze
 
 1. Dem violetten Feld folgen — die Zweitwahl kostet im Schnitt fast nichts, Eigensinn ist erlaubt.
