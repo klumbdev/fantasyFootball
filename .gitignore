@@ -25,3 +25,6 @@ Live NFL Draft*.html
 *_files/
 tools/projections.json
 *.pdf
+_raw/
+*.rtfd/
+drafted.html

@@ -127,10 +127,17 @@ Rankings are consensus ADP, not a projection model.
 
 ```
 draft_board.html            generated — the tool you actually use during a draft
+PROJECT.md                  league settings, data quirks, findings, open items
 tools/build_draft_board.py  fetches data and renders the board
 tools/board_template.html   markup, styling and draft logic
+tools/parse_projections.py  reads Yahoo's projection table from a saved page
 tools/yahoo_auth_test.py    OAuth flow, checks whether Fantasy access is provisioned
+tools/injuries.json         league injury report
+tools/yahoo_rank.json       Yahoo's league-adjusted top 25
 ```
+
+`PROJECT.md` is the place to start: it records the league's scoring, the
+quirks of each data source, and the reasoning behind the draft strategy.
 
 ## Setup
 
