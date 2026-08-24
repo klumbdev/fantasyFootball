@@ -314,7 +314,7 @@ function render(){
     const q = query.toLowerCase().trim();
     const bare = q.replace(/^[a-z]\.\s*/, "");
     pool = pool.filter(p => {
-      const hay = (p.name + " " + p.team).toLowerCase();
+      const hay = (p.name + " " + p.team + " " + (p.alias || "")).toLowerCase();
       if (hay.includes(q) || (bare && hay.includes(bare))) return true;
       return /^[a-z]\./.test(q) && pattern(p).test(query);
     });
@@ -526,6 +526,7 @@ const SUFFIX = /\s+(?:Jr\.?|Sr\.?|II|III|IV|V)$/i;
 const esc = t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 function pattern(p){
+  if (p.alias) return new RegExp("\\b" + esc(p.alias) + "\\b", "gi");   // "Vikings"
   const bits = p.name.replace(SUFFIX, "").split(" ");
   const initial = bits[0][0];
   const surname = bits.slice(1).join(" ") || bits[0];

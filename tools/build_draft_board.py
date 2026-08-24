@@ -30,6 +30,20 @@ OUT = ROOT / "draft_board.html"
 
 SUFFIXES = {"jr", "sr", "ii", "iii", "iv", "v"}
 
+# Die ADP-Quelle schreibt "Minnesota Defense", Yahoo zeigt "Vikings". Ohne den
+# Spitznamen findet man die Defense weder im Board noch beim Pick-Abgleich.
+NICKNAMES = {
+    "ARI": "Cardinals", "ATL": "Falcons", "BAL": "Ravens", "BUF": "Bills",
+    "CAR": "Panthers", "CHI": "Bears", "CIN": "Bengals", "CLE": "Browns",
+    "DAL": "Cowboys", "DEN": "Broncos", "DET": "Lions", "GB": "Packers",
+    "HOU": "Texans", "IND": "Colts", "JAC": "Jaguars", "JAX": "Jaguars",
+    "KC": "Chiefs", "LV": "Raiders", "LAC": "Chargers", "LAR": "Rams",
+    "MIA": "Dolphins", "MIN": "Vikings", "NE": "Patriots", "NO": "Saints",
+    "NYG": "Giants", "NYJ": "Jets", "PHI": "Eagles", "PIT": "Steelers",
+    "SF": "49ers", "SEA": "Seahawks", "TB": "Buccaneers", "TEN": "Titans",
+    "WAS": "Commanders", "WSH": "Commanders",
+}
+
 
 def fetch(url):
     req = urllib.request.Request(url, headers={"User-Agent": "fantasyFootball/0.1"})
@@ -121,6 +135,7 @@ def main():
             "exp": s.get("years_exp"),
             "depth": s.get("depth_chart_order"),
             "inj": s.get("injury_status"),
+            "alias": NICKNAMES.get((r["team"] or "").upper()) if pos == "DST" else None,
         })
     print(f"  {matched}/{len(raw)} mit Sleeper-Daten angereichert")
 
