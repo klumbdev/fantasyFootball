@@ -18,6 +18,10 @@ SCORING = "half-ppr"
 SEASON = 2026
 TIER_CAP = 6  # groesste sinnvolle Tier-Laenge fuer die Anzeige
 
+# Achtung: die API ignoriert den teams-Parameter - eine Abfrage mit teams=14
+# liefert byteweise dieselben Werte. Die ADP ist allgemeine Half-PPR-ADP, nicht
+# auf die Ligagroesse gefiltert. Ordnung und Pick-Nummern bleiben brauchbar,
+# die Erwartung "wann geht wer" ist aber Marktschnitt, nicht 8-Team-spezifisch.
 FFC_URL = f"https://fantasyfootballcalculator.com/api/v1/adp/{SCORING}?teams={TEAMS}&year={SEASON}"
 SLEEPER_URL = "https://api.sleeper.app/v1/players/nfl"
 
