@@ -37,6 +37,20 @@ def fetch(url):
         return json.loads(r.read())
 
 
+def initial_key(name):
+    """"Jahmyr Gibbs" und "J. Gibbs" auf denselben Schluessel bringen.
+
+    Der volle Nachname geht mit ein, nicht nur das letzte Wort - sonst faellt
+    Amon-Ra St. Brown mit A.J. Brown zusammen.
+    """
+    parts = [p for p in re.sub(r"[^A-Za-z .'-]", "", name).split()
+             if p.lower().strip(".") not in SUFFIXES]
+    if not parts:
+        return ""
+    surname = "".join(parts[1:]) if len(parts) > 1 else parts[0]
+    return (parts[0][0] + re.sub(r"[^a-z]", "", surname.lower())).lower()
+
+
 def norm(name):
     """Normalise a player name so FFC and Sleeper spellings line up."""
     n = re.sub(r"[^a-z ]", "", name.lower())
@@ -136,6 +150,45 @@ def main():
             p["lrank"] = r
             p["ldelta"] = round(p["adp"] - r, 1)   # positiv = geht frueher als ADP
     print(f"  Liga-Rangliste: {sum(1 for p in players if p.get('lrank'))}/{len(yr)} zugeordnet")
+
+    # Projektionen und Value over Replacement, falls vorhanden. Sie sind der
+    # bessere Massstab als ADP: ADP sagt, wann jemand gezogen wird, VOR sagt,
+    # was er gegenueber dem frei verfuegbaren Ersatzmann einbringt.
+    vf = ROOT / "tools" / "projections.json"
+    if vf.exists():
+        raw_vor = json.loads(vf.read_text())
+        # Yahoo nennt nur "B. Robinson" - Bijan und Brian sind daran nicht zu
+        # unterscheiden, auch nicht ueber Team oder Position. Beide Quellen
+        # fuehren aber eine ADP, und die liegt Welten auseinander. Bei
+        # mehrdeutigen Namen gewinnt deshalb die naechstliegende ADP; ohne
+        # brauchbare ADP wird gar nicht zugeordnet, statt zu raten.
+        cands = {}
+        for r in raw_vor:
+            cands.setdefault(initial_key(r["name"]), []).append(r)
+
+        n_v, unresolved = 0, []
+        for p in players:
+            lst = cands.get(initial_key(p["name"]))
+            if not lst:
+                continue
+            if len(lst) == 1:
+                v = lst[0]
+            else:
+                scored = [(abs((c.get("adp") or 999) - p["adp"]), c) for c in lst]
+                scored.sort(key=lambda x: x[0])
+                if scored[0][0] > 25:            # keiner passt plausibel
+                    unresolved.append(p["name"])
+                    continue
+                v = scored[0][1]
+            if v.get("vor") is not None:
+                p["proj"], p["vor"], p["vorRank"] = v["proj_league"], v["vor"], v["vor_rank"]
+                n_v += 1
+        print(f"  Projektionen: {n_v}/{len(raw_vor)} Spieler mit VOR verknuepft"
+              + (f" | nicht zuordenbar: {', '.join(unresolved)}" if unresolved else ""))
+        fehlt = [r["name"] for r in raw_vor[:60]
+                 if initial_key(r["name"]) not in {initial_key(p["name"]) for p in players}]
+        if fehlt:
+            print("    aus den Top 60 nicht zugeordnet:", ", ".join(fehlt))
 
     tier_up(players)
     players.sort(key=lambda p: p["adp"])

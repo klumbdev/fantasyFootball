@@ -98,7 +98,12 @@ textarea:focus{outline:none;border-color:var(--accent)}
 #rec .who{font-size:23px;font-weight:800;letter-spacing:-.01em;line-height:1.1}
 #rec .why{font-size:13px;color:#cfc6f5;margin-top:2px}
 #rec .mid{flex:1;min-width:0}
-#rec .alts{font-size:12px;color:var(--dim);text-align:right;flex:none;line-height:1.6}
+#rec .alts{font-size:12px;flex:none;display:flex;flex-direction:column;gap:3px;max-width:340px}
+#rec .alt{display:flex;align-items:center;gap:6px;padding:3px 8px;border-radius:6px;
+  border:1px solid transparent;cursor:pointer;justify-content:flex-end}
+#rec .alt:hover{border-color:var(--accent);background:#2b2350}
+#rec .alt b{font-weight:650;color:var(--fg);white-space:nowrap}
+#rec .alt .ar{color:#9d92c4;font-size:11px;max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #rec button{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;
   padding:9px 16px;font-size:14px;flex:none}
 #rec.wait{background:#181d29;border-bottom-color:var(--line)}
@@ -250,9 +255,21 @@ function draft(id, isMine){
   S.drafted[id] = isMine ? "me" : "other";
   S.order.push(id);
   if (isMine) S.mine.push(id);
+  S.lastSync = [];                       // manueller Pick beendet den Block
   save(); render();
 }
 function undo(){
+  // Ein Sammelabgleich kann hundert Spieler streichen. Der muss sich in einem
+  // Zug zuruecknehmen lassen, nicht in hundert Klicks.
+  if (S.lastSync && S.lastSync.length){
+    for (const id of S.lastSync){
+      delete S.drafted[id];
+      S.order = S.order.filter(x => x !== id);
+    }
+    S.lastSync = [];
+    save(); render();
+    return;
+  }
   const id = S.order.pop();
   if (!id) return;
   delete S.drafted[id];
@@ -292,8 +309,15 @@ function render(){
   let pool = avail();
   if (filter !== "ALL") pool = pool.filter(p => p.pos === filter);
   if (query){
-    const q = query.toLowerCase();
-    pool = pool.filter(p => (p.name + " " + p.team).toLowerCase().includes(q));
+    // Yahoo zeigt "K. WALKER III", das Board "Kenneth Walker". Beide Formen
+    // muessen zum Ziel fuehren, sonst sucht man waehrend der Uhr vergeblich.
+    const q = query.toLowerCase().trim();
+    const bare = q.replace(/^[a-z]\.\s*/, "");
+    pool = pool.filter(p => {
+      const hay = (p.name + " " + p.team).toLowerCase();
+      if (hay.includes(q) || (bare && hay.includes(bare))) return true;
+      return /^[a-z]\./.test(q) && pattern(p).test(query);
+    });
   }
 
   const myByes = {};
@@ -332,7 +356,7 @@ function render(){
           '<div class="meta">' + p.team + " · Bye " + p.bye + " · Tier " + p.tier +
             (p.age ? " · " + p.age + "J" : "") +
             (p.depth ? " · DC" + p.depth : "") +
-            " · n=" + p.n + "</div></div>" +
+            (p.vor != null ? " · VOR " + Math.round(p.vor) + " (#" + p.vorRank + ")" : " · n=" + p.n) + "</div></div>" +
         '<div class="surv num" style="color:' + svCol + '">' + svTxt + "</div>" +
         '<div class="num" style="text-align:right;font-size:11px;color:var(--faint)">' + p.high + "–" + p.low + "</div>" +
         '<div class="acts">' +
@@ -387,7 +411,9 @@ function render(){
         (R.top.why.length > 1 ? " · " + R.top.why[1] : "") +
         "</div></div>" +
       '<div class="alts">' + R.alts.map(a =>
-        a.p.name + " <span style=\'color:var(--faint)\'>" + a.p.pos + "</span>").join("<br>") + "</div>" +
+        '<div class="alt" onclick="draft(' + a.p.id + ',true)">' +
+          '<b>' + a.p.name + '</b> <span class="pos ' + a.p.pos + '">' + a.p.pos + a.p.pos_rank + "</span>" +
+          '<span class="ar">' + (a.why[0] || "solide Alternative") + "</span></div>").join("") + "</div>" +
       '<button onclick="draft(' + p.id + ',true)">nehmen</button>';
   } else recEl.innerHTML = "";
 
@@ -420,12 +446,9 @@ function render(){
    TE und QB nach vorne zieht - also die beiden Positionen, die man laufen
    lassen und spaeter billiger nachholen kann. */
 const PLAN = [
-  [1, 3,  "Nur bester RB oder WR", "kein TE, kein QB - die gehen hier zu teuer weg", ["RB","WR"]],
-  [4, 6,  "Weiter RB/WR-Tiefe",    "bester Verfügbarer, nicht nach Position greifen", ["RB","WR"]],
-  [7, 9,  "TE holen",              "Loveland bevorzugt, Tyler Warren ist angeschlagen", ["TE"]],
-  [10,12, "QB holen",              "12 brauchbare Optionen zwischen ADP 51 und 102", ["QB"]],
-  [13,13, "Upside-Pick",           "letzter Zug mit echtem Aufwärtspotenzial", ["RB","WR","TE"]],
-  [14,15, "Kicker und Defense",    "keinen Pick früher dafuer ausgeben", ["K","DST"]],
+  [1, 12, "Bester Mehrwert",    "VOR entscheidet, nicht die Position", ["QB","RB","WR","TE"]],
+  [13,13, "Letzter Skill-Pick", "danach nur noch Kicker und Defense", ["QB","RB","WR","TE"]],
+  [14,15, "Kicker und Defense", "keinen Pick früher dafür ausgeben", ["K","DST"]],
 ];
 
 /* ---- Empfehlung ----
@@ -462,14 +485,18 @@ function recommend(){
     // Rang = wie aussagekraeftig der Grund ist. Der beste wird angezeigt.
     const why = [];
     const add = (rank, text) => why.push([rank, text]);
-    let sc = p.adp;
+    // Kleiner ist besser. VOR wird in eine ADP-aehnliche Skala gedreht, damit
+    // Spieler ohne Projektion (tiefe Bank, K, DEF) vergleichbar bleiben.
+    let sc = p.vorRank ? p.vorRank : p.adp + 40;
     if (sv !== null){
       sc += sv * 14;                       // wer knapp durchkommt, ist der dringendere Zug
       if (sv < .55) add(1, "kommt nur mit " + Math.round(sv * 100) + "% bis zu deinem Pick durch");
       else add(3, "voraussichtlich noch da (" + Math.round(sv * 100) + "%)");
     }
     if (falling) { sc -= 4; add(2, "fällt " + Math.round(n - p.adp) + " Picks unter seine ADP"); }
-    if (p.ldelta >= 4) { sc -= 3; add(3, "geht in eurer Liga rund " + Math.round(p.ldelta) + " Picks früher als die ADP"); }
+    if (p.ldelta >= 4) { sc -= 3; add(4, "geht in eurer Liga rund " + Math.round(p.ldelta) + " Picks früher als die ADP"); }
+    if (p.vor != null && p.adp && p.vorRank && p.adp - p.vorRank >= 8)
+      { sc -= 4; add(2, "Mehrwert von " + Math.round(p.vor) + " Punkten - der Markt zieht ihn " + Math.round(p.adp - p.vorRank) + " Plaetze zu spaet"); }
     if (runPos === p.pos && open[p.pos]) { sc -= 5; add(4, "Run auf " + p.pos + " läuft und du brauchst die Position"); }
     if (runPos && runPos !== p.pos) { sc -= 3; add(5, "die anderen räumen " + runPos + " leer, hier bleibt Wert liegen"); }
     if (open[p.pos]) { sc -= 6; add(6, "Startplatz " + p.pos + " noch offen"); }
@@ -518,19 +545,19 @@ function syncPicks(text){
   const hit = [], unclear = [];
   for (const [pos, list] of at){
     if (list.length === 1) hit.push(list[0]);
-    else unclear.push(text.substr(pos, 24).split("\n")[0].trim());
+    else { const t = text.substr(pos, 20).split("\n")[0].trim();
+           if (!unclear.includes(t)) unclear.push(t); }
   }
   // Laengster Treffer gewinnt, wenn sich zwei Muster ueberlappen
-  const done = new Set();
-  let n = 0;
+  const done = new Set(), ids = [];
   for (const p of hit){
     if (done.has(p.id) || S.drafted[p.id]) continue;
     done.add(p.id);
     S.drafted[p.id] = "other";
     S.order.push(p.id);
-    n++;
+    ids.push(p.id);
   }
-  return { n, unclear };
+  return { n: ids.length, unclear, ids };
 }
 
 /* ---- Bedienung ---- */
@@ -556,9 +583,22 @@ document.getElementById("reset").onclick = () => {
 };
 document.getElementById("syncBtn").onclick = () => {
   const box = document.getElementById("sync");
-  const r = syncPicks(box.value);
+  const probe = syncPicks(box.value);
+  let r = probe;
+  if (probe.n > 20){
+    // So viele Picks auf einmal deutet auf die falsche Liste hin - typischer
+    // Fall ist die komplette Spielerliste statt der Picks.
+    const ok = confirm(probe.n + " Spieler auf einmal streichen?\n\n" +
+      "Das ist ungewöhnlich viel. Hast du versehentlich die Spielerliste statt " +
+      "der Pickliste kopiert?\n\nAbbrechen macht es sofort rückgängig.");
+    if (!ok){
+      for (const id of probe.ids){ delete S.drafted[id]; S.order = S.order.filter(x => x !== id); }
+      r = { n: 0, unclear: [], ids: [] };
+    }
+  }
+  S.lastSync = r.ids;
   const note = document.getElementById("syncNote");
-  note.textContent = (r.n ? r.n + " gestrichen" : "nichts Neues erkannt") +
+  note.textContent = (r.n ? r.n + " gestrichen · Undo nimmt alle zurück" : "nichts Neues erkannt") +
     (r.unclear.length ? " · unklar, bitte anklicken: " + r.unclear.join(", ") : "");
   note.style.color = r.unclear.length ? "var(--warn)" : "var(--faint)";
   box.value = "";

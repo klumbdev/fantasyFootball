@@ -39,10 +39,16 @@ def num(t):
         return None
 
 
-def main(path):
-    raw = Path(path).read_text(errors="replace")
-    out, skipped = [], 0
-    for body in ROW.findall(raw):
+def main(*paths):
+    # Yahoo rendert nur rund 100 Zeilen gleichzeitig. Mehrere Ausschnitte werden
+    # ueber die Spieler-ID zusammengefuehrt, damit die Liste vollstaendig wird.
+    out, skipped, seen = [], 0, set()
+    bodies = []
+    for p in paths:
+        rows = ROW.findall(Path(p).read_text(errors="replace"))
+        bodies += rows
+        print(f"  {Path(p).name}: {len(rows)} Zeilen")
+    for body in bodies:
         m = NAME.search(body)
         if not m:
             continue
@@ -53,9 +59,10 @@ def main(path):
                      and not t.startswith("Bye")), None)
         cells = CELL.findall(body)[1:]                      # erste Zelle ist der Spieler
         vals = dict(zip(COLS, [num(c) for c in cells]))
-        if vals.get("proj") is None:
+        if vals.get("proj") is None or int(pid) in seen:
             skipped += 1
             continue
+        seen.add(int(pid))
         rec = {"id": int(pid), "name": name, "pos": "DST" if pos == "DEF" else pos,
                "team": team, **{k: vals.get(k) for k in COLS}}
         # QB-Korrektur auf das Liga-Scoring
@@ -79,4 +86,4 @@ def main(path):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1]))
+    sys.exit(main(*sys.argv[1:]))
