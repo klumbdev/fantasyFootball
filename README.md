@@ -7,7 +7,11 @@ running AI assistant that helps with lineup decisions, waiver-wire pickups and t
 evaluation.
 
 > **Status:** early development. Yahoo Fantasy Sports API access has been requested and
-> is pending approval — the client is not functional until credentials are provisioned.
+> is pending approval. A YDN application exists, but the Fantasy Sports permission is not
+> attached to it yet: requesting scope `fspt-r` returns `invalid_scope`, and a token
+> obtained without a scope parameter is rejected by the Fantasy endpoints with
+> `oauth_problem="additional_authorization_required"`. The draft board below works
+> independently of this and needs no Yahoo credentials.
 
 ---
 
@@ -93,9 +97,49 @@ YAHOO_REDIRECT_URI=https://localhost:8080/callback
 
 ---
 
+## Draft board
+
+`draft_board.html` is a self-contained draft assistant that needs no Yahoo access at all.
+It is built from publicly available data and runs offline in a browser.
+
+```bash
+python3 tools/build_draft_board.py   # fetches data, writes draft_board.html
+open draft_board.html
+```
+
+It shows, for a Half-PPR 8-team snake draft:
+
+- ADP, positional rank and tier breaks, derived from real drafts in that exact format
+- the probability that a player is still available at your next pick, from the ADP
+  distribution (mean and standard deviation per player)
+- open lineup slots, bye-week clashes among your starters, and positional runs
+
+Data sources, both public and unauthenticated:
+
+| Source | Used for |
+|---|---|
+| FantasyFootballCalculator ADP API | ADP, standard deviation, draft range, bye weeks |
+| Sleeper players API | injury status, depth chart position, age, experience |
+
+Rankings are consensus ADP, not a projection model.
+
+## Repository layout
+
+```
+draft_board.html            generated — the tool you actually use during a draft
+tools/build_draft_board.py  fetches data and renders the board
+tools/board_template.html   markup, styling and draft logic
+tools/yahoo_auth_test.py    OAuth flow, checks whether Fantasy access is provisioned
+```
+
 ## Setup
 
-Setup instructions will be added once API credentials are available.
+Yahoo credentials go in a local `.env` file (see `.env.example`); it is git-ignored,
+as are the OAuth tokens. Once the Fantasy Sports permission is provisioned:
+
+```bash
+python3 tools/yahoo_auth_test.py   # verifies access and lists your leagues
+```
 
 ---
 
