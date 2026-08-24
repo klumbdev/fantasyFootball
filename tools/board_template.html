@@ -88,6 +88,13 @@ aside h2{margin:0 0 9px;font-size:11px;letter-spacing:.1em;text-transform:upperc
 .warnrow{font-size:12px;color:var(--warn);padding:3px 0}
 .cfg{display:grid;grid-template-columns:1fr 58px;gap:5px 8px;align-items:center;font-size:12px}
 .empty-state{padding:26px;text-align:center;color:var(--faint)}
+#alert{display:none;position:sticky;top:58px;z-index:19;padding:11px 18px;
+  font-size:15px;font-weight:750;letter-spacing:.01em;color:#0d1117;
+  align-items:center;gap:12px;border-bottom:2px solid rgba(0,0,0,.35)}
+#alert.on{display:flex;animation:pulse 1.4s ease-in-out infinite}
+#alert .big{font-size:20px;font-weight:850;letter-spacing:.04em}
+@keyframes pulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.22)}}
+@media(prefers-reduced-motion:reduce){#alert.on{animation:none}}
 </style>
 </head>
 <body>
@@ -104,6 +111,8 @@ aside h2{margin:0 0 9px;font-size:11px;letter-spacing:.1em;text-transform:upperc
   <button id="undo">Undo</button>
   <button id="reset">Reset</button>
 </header>
+
+<div id="alert"></div>
 
 <div class="wrap">
   <main>
@@ -302,7 +311,9 @@ function render(){
     ? clash.map(([w, c]) => '<div class="warnrow">Week ' + w + ": " + c + " Starter gleichzeitig raus</div>").join("")
     : '<div class="note">Keine Haeufung. Ab 2 Startern pro Bye wird gewarnt.</div>';
 
-  const last = S.order.slice(-12).map(id => P.find(p => p.id === id)).filter(Boolean);
+  // Fenster der letzten 8 Picks: ein Run ist, wenn die Haelfte davon dieselbe
+  // Position trifft. Ueber 12 Picks verwaessert das Signal zu stark.
+  const last = S.order.slice(-8).map(id => P.find(p => p.id === id)).filter(Boolean);
   const cnt = {};
   last.forEach(p => cnt[p.pos] = (cnt[p.pos] || 0) + 1);
   runs.innerHTML = Object.entries(cnt).sort((a, b) => b[1] - a[1])
@@ -310,9 +321,21 @@ function render(){
       '</span><span style="color:var(--dim)">' + v + " der letzten " + last.length + "</span><span></span></div>").join("")
     || '<div class="note">Noch keine Picks erfasst.</div>';
   const hot = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
-  runNote.textContent = hot && hot[1] >= 4
+  const isRun = hot && last.length >= 4 && hot[1] >= Math.max(4, Math.ceil(last.length / 2));
+  runNote.textContent = isRun
     ? "Run auf " + hot[0] + " – die Position leert sich schneller als die ADP unterstellt."
     : "Kein akuter Run.";
+  const bar = document.getElementById("alert");
+  if (isRun){
+    const col = {QB:"--qb", RB:"--rb", WR:"--wr", TE:"--te", K:"--k", DST:"--dst"}[hot[0]];
+    bar.style.background = "var(" + col + ")";
+    bar.innerHTML = '<span class="big">RUN AUF ' + hot[0] + "</span>" +
+      "<span>" + hot[1] + " der letzten " + last.length + " Picks – " +
+      (open[hot[0]] ? "du brauchst die Position noch. Vorziehen lohnt."
+                    : "du bist dort versorgt. Andere greifen zu, du nimmst den Value woanders.") +
+      "</span>";
+    bar.classList.add("on");
+  } else bar.classList.remove("on");
   save();
 }
 
