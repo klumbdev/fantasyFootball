@@ -58,6 +58,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .chip.inj{border-color:var(--bad);color:var(--bad)}
 .chip.val{border-color:var(--good);color:var(--good);font-weight:700}
 .chip.byeclash{border-color:var(--warn);color:var(--warn)}
+.chip.qb6{border-color:var(--qb);color:var(--qb)}
 .surv{text-align:right;font-size:13px;font-weight:650}
 .acts{display:flex;gap:6px;justify-content:flex-end}
 .acts button{padding:5px 9px;font-size:12px}
@@ -142,7 +143,7 @@ const P = DATA.players, M = DATA.meta, T = M.teams;
 const LS = "draftboard_" + M.season + "_" + T;
 
 let S = load() || { drafted: {}, mine: [], order: [], slot: 1,
-                    lineup: {QB:1, RB:2, WR:3, TE:1, FLEX:1, K:1, DST:1} };
+                    lineup: {QB:1, RB:2, WR:2, TE:1, FLEX:1, K:1, DST:1} };
 
 function load(){ try { return JSON.parse(localStorage.getItem(LS)); } catch(e){ return null; } }
 function save(){ try { localStorage.setItem(LS, JSON.stringify(S)); } catch(e){} }
@@ -243,7 +244,8 @@ function render(){
       (p.inj ? '<span class="chip inj">' + p.inj + "</span>" : "") +
       (falling ? '<span class="chip val">fällt ' + Math.round(n - p.adp) + "</span>" : "") +
       (myByes[p.bye] >= 2 ? '<span class="chip byeclash">Bye ' + p.bye + " ×" + myByes[p.bye] + "</span>" : "") +
-      (open[p.pos] ? '<span class="chip">Bedarf</span>' : "");
+      (open[p.pos] ? '<span class="chip">Bedarf</span>' : "") +
+      (p.pos === "QB" ? '<span class="chip qb6">6-Pkt-TD</span>' : "");
     html +=
       '<div class="row">' +
         '<div class="adp num">' + p.adpFmt + "</div>" +
@@ -324,9 +326,12 @@ cfgEl.innerHTML = Object.keys(S.lineup).map(k =>
 cfgEl.querySelectorAll("input").forEach(i => i.onchange = e => {
   S.lineup[e.target.dataset.k] = +e.target.value; save(); render();
 });
-document.getElementById("src").textContent =
+document.getElementById("src").innerHTML =
+  "<b>Football Fanatics 2</b> · QB/WR/WR/RB/RB/TE/FLEX/K/DEF + 6 Bank · 15 Runden · 45 s pro Pick<br><br>" +
   M.scoring + " · " + T + " Teams · ADP aus " + M.drafts.toLocaleString("de-DE") +
-  " Drafts (" + M.window + "). Prozent = Wahrscheinlichkeit, dass der Spieler bis zu deinem naechsten Pick noch da ist.";
+  " Drafts (" + M.window + "). Prozent = Wahrscheinlichkeit, dass der Spieler bis zu deinem naechsten Pick noch da ist.<br><br>" +
+  "Achtung: eure Liga gibt <b>6 Punkte pro Pass-TD</b> (Yahoo-Standard: 4) und <b>-2 pro Interception</b>. " +
+  "Die ADP-Quelle rechnet mit dem Standard, QBs sind hier also etwas mehr wert als ihre ADP zeigt.";
 
 render();
 q.focus();
