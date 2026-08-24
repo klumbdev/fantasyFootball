@@ -59,6 +59,10 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .chip.val{border-color:var(--good);color:var(--good);font-weight:700}
 .chip.byeclash{border-color:var(--warn);color:var(--warn)}
 .chip.qb6{border-color:var(--qb);color:var(--qb)}
+.chip.out{background:var(--bad);border-color:var(--bad);color:#0d1117;font-weight:800}
+.chip.risk{border-color:var(--warn);color:var(--warn);font-weight:650}
+.chip.watch{border-color:var(--faint);color:var(--faint)}
+.row.isout{opacity:.45}
 .surv{text-align:right;font-size:13px;font-weight:650}
 .acts{display:flex;gap:6px;justify-content:flex-end}
 .acts button{padding:5px 9px;font-size:12px}
@@ -241,13 +245,16 @@ function render(){
     const svCol = sv === null ? "var(--faint)" : sv > .7 ? "var(--good)" : sv > .35 ? "var(--warn)" : "var(--bad)";
     const falling = p.adp <= n - T * 0.5;
     const chips =
-      (p.inj ? '<span class="chip inj">' + p.inj + "</span>" : "") +
+      (p.sev ? '<span class="chip ' + p.sev + '">' +
+        (p.sev === "out" ? "RAUS" : p.sev === "risk" ? "angeschlagen" : "offen") +
+        ": " + p.injNote + "</span>" : "") +
+      (p.inj && !p.sev ? '<span class="chip inj">' + p.inj + "</span>" : "") +
       (falling ? '<span class="chip val">fällt ' + Math.round(n - p.adp) + "</span>" : "") +
       (myByes[p.bye] >= 2 ? '<span class="chip byeclash">Bye ' + p.bye + " ×" + myByes[p.bye] + "</span>" : "") +
       (open[p.pos] ? '<span class="chip">Bedarf</span>' : "") +
       (p.pos === "QB" ? '<span class="chip qb6">6-Pkt-TD</span>' : "");
     html +=
-      '<div class="row">' +
+      '<div class="row' + (p.sev === "out" ? " isout" : "") + '">' +
         '<div class="adp num">' + p.adpFmt + "</div>" +
         '<div><div class="nm">' + p.name +
           '<span class="pos ' + p.pos + '">' + p.pos + p.pos_rank + "</span>" + chips + "</div>" +

@@ -106,6 +106,21 @@ def main():
         })
     print(f"  {matched}/{len(raw)} mit Sleeper-Daten angereichert")
 
+    # Yahoo-Verletzungsreport der Liga ueberlagern. Er ist aktueller und
+    # liga-spezifischer als der Sleeper-Status.
+    inj = json.loads((ROOT / "tools" / "injuries.json").read_text())["players"]
+    lookup = {norm(k): v for k, v in inj.items()}
+    hits = 0
+    for p in players:
+        v = lookup.get(norm(p["name"]))
+        if v:
+            p["sev"], p["injNote"] = v
+            hits += 1
+    print(f"  Verletzungsreport: {hits}/{len(inj)} Eintraege im Spielerpool zugeordnet")
+    missing = [k for k in inj if norm(k) not in {norm(p["name"]) for p in players}]
+    if missing:
+        print("    ausserhalb der ADP-Liste:", ", ".join(missing))
+
     tier_up(players)
     players.sort(key=lambda p: p["adp"])
 
