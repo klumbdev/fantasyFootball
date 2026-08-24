@@ -310,7 +310,7 @@ function render(){
       (p.pos === "QB" ? '<span class="chip qb6">6-Pkt-TD</span>' : "") +
       (p.lrank ? '<span class="chip lrank">Liga #' + p.lrank + "</span>" : "") +
       (p.ldelta >= 4 ? '<span class="chip early">geht ~' + Math.round(p.ldelta) +
-        ' frueher</span>' : "");
+        ' früher</span>' : "");
     html +=
       '<div class="row' + (p.sev === "out" ? " isout" : "") + '">' +
         '<div class="adp num">' + p.adpFmt + "</div>" +
@@ -343,7 +343,7 @@ function render(){
   const clash = Object.entries(myByes).filter(([, c]) => c >= 2);
   byes.innerHTML = clash.length
     ? clash.map(([w, c]) => '<div class="warnrow">Week ' + w + ": " + c + " Starter gleichzeitig raus</div>").join("")
-    : '<div class="note">Keine Haeufung. Ab 2 Startern pro Bye wird gewarnt.</div>';
+    : '<div class="note">Keine Häufung. Ab 2 Startern pro Bye wird gewarnt.</div>';
 
   // Fenster der letzten 8 Picks: ein Run ist, wenn die Haelfte davon dieselbe
   // Position trifft. Ueber 12 Picks verwaessert das Signal zu stark.
@@ -363,15 +363,15 @@ function render(){
   const R = recommend();
   const recEl = document.getElementById("rec");
   if (R){
-    const p = R.top.p, mine = next === n;
-    const why = R.top.why.length ? R.top.why[0] : "bester verfuegbarer Spieler im Plan";
+    const p = R.top.p, mine = R.mine;
+    const why = R.top.why.length ? R.top.why[0] : "bester verfügbarer Spieler im Rundenplan";
     recEl.className = mine ? "" : "wait";
     recEl.innerHTML =
       '<div class="lbl">' + (mine ? "Du bist dran<br>nimm" : "Pick " + next + "<br>in " + (next - n)) + "</div>" +
       '<div class="mid"><div class="who">' + p.name +
         ' <span class="pos ' + p.pos + '">' + p.pos + p.pos_rank + "</span></div>" +
         '<div class="why">' + why[0].toUpperCase() + why.slice(1) +
-        (R.top.sv != null ? " · " + Math.round(R.top.sv * 100) + "% dass er bis Pick " + next + " ueberlebt" : "") +
+        (R.top.why.length > 1 ? " · " + R.top.why[1] : "") +
         "</div></div>" +
       '<div class="alts">' + R.alts.map(a =>
         a.p.name + " <span style=\'color:var(--faint)\'>" + a.p.pos + "</span>").join("<br>") + "</div>" +
@@ -408,18 +408,18 @@ function render(){
    lassen und spaeter billiger nachholen kann. */
 const PLAN = [
   [1, 3,  "Nur bester RB oder WR", "kein TE, kein QB - die gehen hier zu teuer weg", ["RB","WR"]],
-  [4, 6,  "Weiter RB/WR-Tiefe",    "bester Verfuegbarer, nicht nach Position greifen", ["RB","WR"]],
+  [4, 6,  "Weiter RB/WR-Tiefe",    "bester Verfügbarer, nicht nach Position greifen", ["RB","WR"]],
   [7, 9,  "TE holen",              "Loveland bevorzugt, Tyler Warren ist angeschlagen", ["TE"]],
   [10,12, "QB holen",              "12 brauchbare Optionen zwischen ADP 51 und 102", ["QB"]],
-  [13,13, "Upside-Pick",           "letzter Zug mit echtem Aufwaertspotenzial", ["RB","WR","TE"]],
-  [14,15, "Kicker und Defense",    "keinen Pick frueher dafuer ausgeben", ["K","DST"]],
+  [13,13, "Upside-Pick",           "letzter Zug mit echtem Aufwärtspotenzial", ["RB","WR","TE"]],
+  [14,15, "Kicker und Defense",    "keinen Pick früher dafuer ausgeben", ["K","DST"]],
 ];
 
 /* ---- Empfehlung ----
    Rein lokal gerechnet, damit sie in der 45-Sekunden-Uhr sofort dasteht.
    Der Kern ist nicht "wer ist der Beste", sondern "wen verliere ich, wenn
    ich warte": bei zwei aehnlich guten Spielern gewinnt der, der bis zum
-   naechsten Pick am wenigsten wahrscheinlich noch da ist. */
+   nächsten Pick am wenigsten wahrscheinlich noch da ist. */
 function recommend(){
   const n = pickNo(), next = myNext(), open = needs();
   const want = planFor(roundOf(n))[4].filter(p => open[p] || open.FLEX);
@@ -430,27 +430,42 @@ function recommend(){
     return h && l.length >= 4 && h[1] >= Math.max(4, Math.ceil(l.length/2)) ? h[0] : null;
   })();
 
+  const mine = next === n;
   let pool = avail().filter(p => p.sev !== "out");
   const inPlan = pool.filter(p => want.includes(p.pos));
   if (inPlan.length) pool = inPlan;                    // Plan zuerst, sonst bester Gesamtwert
+  // Bist du noch nicht dran, ist das eine Vorschau: wer realistisch bis zu
+  // deinem Pick durchkommt. Jemanden zu empfehlen, der sicher weg ist, hilft
+  // nicht. Bist du dran, liegen ohnehin nur verfuegbare Spieler vor dir.
+  if (!mine){
+    const reachable = pool.filter(p => (survival(p, next) ?? 0) >= .25);
+    if (reachable.length) pool = reachable;
+  }
   if (!pool.length) return null;
 
   const scored = pool.map(p => {
-    const sv = survival(p, next) ?? 0;
+    const sv = mine ? null : (survival(p, next) ?? 0);
     const falling = p.adp <= n - T * 0.5;
+    // Rang = wie aussagekraeftig der Grund ist. Der beste wird angezeigt.
     const why = [];
+    const add = (rank, text) => why.push([rank, text]);
     let sc = p.adp;
-    sc += sv * 14;                    if (sv < .25) why.push("bis zu deinem naechsten Pick fast sicher weg");
-    if (open[p.pos]) { sc -= 6;       why.push("Startplatz " + p.pos + " noch offen"); }
-    if (runPos === p.pos && open[p.pos]) { sc -= 5; why.push("Run auf " + p.pos + " laeuft"); }
-    if (runPos && runPos !== p.pos)  { sc -= 3; why.push("die anderen raeumen " + runPos + " leer, hier bleibt Wert liegen"); }
-    if (falling) { sc -= 4;           why.push("faellt " + Math.round(n - p.adp) + " Picks unter ADP"); }
-    if (p.ldelta >= 4) { sc -= 3;     why.push("geht in eurer Liga ~" + Math.round(p.ldelta) + " Picks frueher als die ADP"); }
-    if (p.sev === "risk") { sc += 8;  why.push("angeschlagen: " + p.injNote); }
-    return { p, sc, why, sv };
+    if (sv !== null){
+      sc += sv * 14;                       // wer knapp durchkommt, ist der dringendere Zug
+      if (sv < .55) add(1, "kommt nur mit " + Math.round(sv * 100) + "% bis zu deinem Pick durch");
+      else add(3, "voraussichtlich noch da (" + Math.round(sv * 100) + "%)");
+    }
+    if (falling) { sc -= 4; add(2, "fällt " + Math.round(n - p.adp) + " Picks unter seine ADP"); }
+    if (p.ldelta >= 4) { sc -= 3; add(3, "geht in eurer Liga rund " + Math.round(p.ldelta) + " Picks früher als die ADP"); }
+    if (runPos === p.pos && open[p.pos]) { sc -= 5; add(4, "Run auf " + p.pos + " läuft und du brauchst die Position"); }
+    if (runPos && runPos !== p.pos) { sc -= 3; add(5, "die anderen räumen " + runPos + " leer, hier bleibt Wert liegen"); }
+    if (open[p.pos]) { sc -= 6; add(6, "Startplatz " + p.pos + " noch offen"); }
+    if (p.sev === "risk") { sc += 8; add(0, "angeschlagen (" + p.injNote + "), trotzdem der beste Zug"); }
+    why.sort((a, b) => a[0] - b[0]);
+    return { p, sc, why: why.map(w => w[1]), sv };
   }).sort((a, b) => a.sc - b.sc);
 
-  return { top: scored[0], alts: scored.slice(1, 3), next, runPos };
+  return { top: scored[0], alts: scored.slice(1, 3), next, runPos, mine };
 }
 const planFor = r => PLAN.find(([a, b]) => r >= a && r <= b) || PLAN[PLAN.length - 1];
 
@@ -471,7 +486,7 @@ q.onkeydown = e => {
 };
 document.getElementById("undo").onclick = undo;
 document.getElementById("reset").onclick = () => {
-  if (confirm("Draft wirklich zuruecksetzen?")){
+  if (confirm("Draft wirklich zurücksetzen?")){
     S = { drafted:{}, mine:[], order:[], slot:S.slot, v:LINEUP_V, lineup:S.lineup }; save(); render();
   }
 };
@@ -499,7 +514,7 @@ document.getElementById("src").innerHTML =
   "<b>Football Fanatics 2</b> · QB/WR/WR/RB/RB/TE/FLEX/K/DEF + 6 Bank · 15 Runden · 45 s pro Pick<br><br>" +
   M.scoring + " · ADP aus " + M.drafts.toLocaleString("de-DE") +
   " Drafts (" + M.window + "), allgemeine Half-PPR-ADP - nicht nach Ligagroesse gefiltert. " +
-  "Prozent = Wahrscheinlichkeit, dass der Spieler bis zu deinem naechsten Pick noch da ist.<br><br>" +
+  "Prozent = Wahrscheinlichkeit, dass der Spieler bis zu deinem nächsten Pick noch da ist.<br><br>" +
   "Achtung: eure Liga gibt <b>6 Punkte pro Pass-TD</b> (Yahoo-Standard: 4) und <b>-2 pro Interception</b>. " +
   "Die ADP-Quelle rechnet mit dem Standard, QBs sind hier also etwas mehr wert als ihre ADP zeigt.";
 
