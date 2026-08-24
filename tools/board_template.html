@@ -88,7 +88,18 @@ aside h2{margin:0 0 9px;font-size:11px;letter-spacing:.1em;text-transform:upperc
 .warnrow{font-size:12px;color:var(--warn);padding:3px 0}
 .cfg{display:grid;grid-template-columns:1fr 58px;gap:5px 8px;align-items:center;font-size:12px}
 .empty-state{padding:26px;text-align:center;color:var(--faint)}
-#plan{position:sticky;top:58px;z-index:18;display:flex;gap:14px;align-items:baseline;
+#rec{position:sticky;top:58px;z-index:19;background:linear-gradient(90deg,#241c4d,#1a1730);
+  border-bottom:1px solid var(--accent);padding:12px 18px;display:flex;gap:16px;align-items:center}
+#rec .lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#b9a8ff;flex:none}
+#rec .who{font-size:23px;font-weight:800;letter-spacing:-.01em;line-height:1.1}
+#rec .why{font-size:13px;color:#cfc6f5;margin-top:2px}
+#rec .mid{flex:1;min-width:0}
+#rec .alts{font-size:12px;color:var(--dim);text-align:right;flex:none;line-height:1.6}
+#rec button{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;
+  padding:9px 16px;font-size:14px;flex:none}
+#rec.wait{background:#181d29;border-bottom-color:var(--line)}
+#rec.wait .who{font-size:17px;color:var(--dim)}
+#plan{position:sticky;top:118px;z-index:18;display:flex;gap:14px;align-items:baseline;
   padding:8px 18px;background:#141a26;border-bottom:1px solid var(--line);font-size:14px}
 #plan b{color:var(--accent);font-weight:800;letter-spacing:.04em;flex:none}
 #plan span{color:var(--fg)}
@@ -100,7 +111,7 @@ aside h2{margin:0 0 9px;font-size:11px;letter-spacing:.1em;text-transform:upperc
 .planrow.now{color:var(--fg)}
 .planrow.now b{color:var(--accent)}
 .planrow.done{opacity:.4}
-#alert{display:none;position:sticky;top:97px;z-index:19;padding:11px 18px;
+#alert{display:none;position:sticky;top:157px;z-index:19;padding:11px 18px;
   font-size:15px;font-weight:750;letter-spacing:.01em;color:#0d1117;
   align-items:center;gap:12px;border-bottom:2px solid rgba(0,0,0,.35)}
 #alert.on{display:flex;animation:pulse 1.4s ease-in-out infinite}
@@ -124,6 +135,7 @@ aside h2{margin:0 0 9px;font-size:11px;letter-spacing:.1em;text-transform:upperc
   <button id="reset">Reset</button>
 </header>
 
+<div id="rec"></div>
 <div id="plan"></div>
 <div id="alert"></div>
 
@@ -342,6 +354,25 @@ function render(){
   runNote.textContent = isRun
     ? "Run auf " + hot[0] + " – die Position leert sich schneller als die ADP unterstellt."
     : "Kein akuter Run.";
+  // --- Empfehlungsfeld ---
+  const R = recommend();
+  const recEl = document.getElementById("rec");
+  if (R){
+    const p = R.top.p, mine = next === n;
+    const why = R.top.why.length ? R.top.why[0] : "bester verfuegbarer Spieler im Plan";
+    recEl.className = mine ? "" : "wait";
+    recEl.innerHTML =
+      '<div class="lbl">' + (mine ? "Du bist dran<br>nimm" : "Pick " + next + "<br>in " + (next - n)) + "</div>" +
+      '<div class="mid"><div class="who">' + p.name +
+        ' <span class="pos ' + p.pos + '">' + p.pos + p.pos_rank + "</span></div>" +
+        '<div class="why">' + why[0].toUpperCase() + why.slice(1) +
+        (R.top.sv != null ? " · " + Math.round(R.top.sv * 100) + "% dass er bis Pick " + next + " ueberlebt" : "") +
+        "</div></div>" +
+      '<div class="alts">' + R.alts.map(a =>
+        a.p.name + " <span style=\'color:var(--faint)\'>" + a.p.pos + "</span>").join("<br>") + "</div>" +
+      '<button onclick="draft(' + p.id + ',true)">nehmen</button>';
+  } else recEl.innerHTML = "";
+
   const [pa, pb, ptitle, phint] = planFor(roundOf(n));
   document.getElementById("plan").innerHTML =
     "<b>RUNDE " + roundOf(n) + "</b><span>" + ptitle + "</span><i>" + phint + "</i>";
@@ -371,13 +402,51 @@ function render(){
    TE und QB nach vorne zieht - also die beiden Positionen, die man laufen
    lassen und spaeter billiger nachholen kann. */
 const PLAN = [
-  [1, 3,  "Nur bester RB oder WR", "kein TE, kein QB - die gehen hier zu teuer weg"],
-  [4, 6,  "Weiter RB/WR-Tiefe",    "bester Verfuegbarer, nicht nach Position greifen"],
-  [7, 9,  "TE holen",              "Loveland bevorzugt, Tyler Warren ist angeschlagen"],
-  [10,12, "QB holen",              "12 brauchbare Optionen zwischen ADP 51 und 102"],
-  [13,13, "Upside-Pick",           "letzter Zug mit echtem Aufwaertspotenzial"],
-  [14,15, "Kicker und Defense",    "keinen Pick frueher dafuer ausgeben"],
+  [1, 3,  "Nur bester RB oder WR", "kein TE, kein QB - die gehen hier zu teuer weg", ["RB","WR"]],
+  [4, 6,  "Weiter RB/WR-Tiefe",    "bester Verfuegbarer, nicht nach Position greifen", ["RB","WR"]],
+  [7, 9,  "TE holen",              "Loveland bevorzugt, Tyler Warren ist angeschlagen", ["TE"]],
+  [10,12, "QB holen",              "12 brauchbare Optionen zwischen ADP 51 und 102", ["QB"]],
+  [13,13, "Upside-Pick",           "letzter Zug mit echtem Aufwaertspotenzial", ["RB","WR","TE"]],
+  [14,15, "Kicker und Defense",    "keinen Pick frueher dafuer ausgeben", ["K","DST"]],
 ];
+
+/* ---- Empfehlung ----
+   Rein lokal gerechnet, damit sie in der 45-Sekunden-Uhr sofort dasteht.
+   Der Kern ist nicht "wer ist der Beste", sondern "wen verliere ich, wenn
+   ich warte": bei zwei aehnlich guten Spielern gewinnt der, der bis zum
+   naechsten Pick am wenigsten wahrscheinlich noch da ist. */
+function recommend(){
+  const n = pickNo(), next = myNext(), open = needs();
+  const want = planFor(roundOf(n))[4].filter(p => open[p] || open.FLEX);
+  const runPos = (() => {
+    const l = S.order.slice(-8).map(i => P.find(p => p.id === i)).filter(Boolean);
+    const c = {}; l.forEach(p => c[p.pos] = (c[p.pos]||0)+1);
+    const h = Object.entries(c).sort((a,b) => b[1]-a[1])[0];
+    return h && l.length >= 4 && h[1] >= Math.max(4, Math.ceil(l.length/2)) ? h[0] : null;
+  })();
+
+  let pool = avail().filter(p => p.sev !== "out");
+  const inPlan = pool.filter(p => want.includes(p.pos));
+  if (inPlan.length) pool = inPlan;                    // Plan zuerst, sonst bester Gesamtwert
+  if (!pool.length) return null;
+
+  const scored = pool.map(p => {
+    const sv = survival(p, next) ?? 0;
+    const falling = p.adp <= n - T * 0.5;
+    const why = [];
+    let sc = p.adp;
+    sc += sv * 14;                    if (sv < .25) why.push("bis zu deinem naechsten Pick fast sicher weg");
+    if (open[p.pos]) { sc -= 6;       why.push("Startplatz " + p.pos + " noch offen"); }
+    if (runPos === p.pos && open[p.pos]) { sc -= 5; why.push("Run auf " + p.pos + " laeuft"); }
+    if (runPos && runPos !== p.pos)  { sc -= 3; why.push("die anderen raeumen " + runPos + " leer, hier bleibt Wert liegen"); }
+    if (falling) { sc -= 4;           why.push("faellt " + Math.round(n - p.adp) + " Picks unter ADP"); }
+    if (p.ldelta >= 4) { sc -= 3;     why.push("geht in eurer Liga ~" + Math.round(p.ldelta) + " Picks frueher als die ADP"); }
+    if (p.sev === "risk") { sc += 8;  why.push("angeschlagen: " + p.injNote); }
+    return { p, sc, why, sv };
+  }).sort((a, b) => a.sc - b.sc);
+
+  return { top: scored[0], alts: scored.slice(1, 3), next, runPos };
+}
 const planFor = r => PLAN.find(([a, b]) => r >= a && r <= b) || PLAN[PLAN.length - 1];
 
 /* ---- Bedienung ---- */
