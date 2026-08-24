@@ -456,6 +456,22 @@ const PLAN = [
    Der Kern ist nicht "wer ist der Beste", sondern "wen verliere ich, wenn
    ich warte": bei zwei aehnlich guten Spielern gewinnt der, der bis zum
    nächsten Pick am wenigsten wahrscheinlich noch da ist. */
+// Wie viele Spieler einer Position ueberhaupt Sinn ergeben. Bei 8 Teams ist
+// der Waiver Wire das ganze Jahr voll: ein zweiter QB oder TE ist Ballast,
+// RB- und WR-Tiefe traegt dagegen ueber Verletzungen und Bye Weeks.
+const USEFUL = {QB: 1, RB: 6, WR: 6, TE: 1, K: 1, DST: 1};
+
+// Was ein weiterer Spieler dieser Position DIR noch bringt. VOR misst den Wert
+// gegenueber dem Ersatzmann fuer einen Startplatz - ist der besetzt, faellt
+// dieser Wert fuer dich weitgehend weg, ligaweit bleibt er aber gleich.
+function marginal(pos, open, mine){
+  const have = mine.filter(p => p.pos === pos).length;
+  if (have >= USEFUL[pos]) return 0;                       // gar nicht mehr vorschlagen
+  if (open[pos]) return 1;                                 // Startplatz offen
+  if (open.FLEX && FLEXOK.includes(pos)) return 0.85;      // FLEX offen
+  return pos === "RB" || pos === "WR" ? 0.45 : 0.15;       // reine Bank
+}
+
 function recommend(){
   const n = pickNo(), next = myNext(), open = needs();
   const want = planFor(roundOf(n))[4].filter(p => open[p] || open.FLEX);
@@ -467,7 +483,14 @@ function recommend(){
   })();
 
   const mine = next === n;
-  let pool = avail().filter(p => p.sev !== "out");
+  const roster = myTeam();
+  // Bye Weeks der eigenen Starter zaehlen. Drei Ausfaelle in derselben Woche
+  // kosten ein Spiel; das gehoert in die Bewertung, nicht nur in eine Anzeige.
+  const byeLoad = {};
+  fillSlots().slots.forEach(sl => { if (sl.p) byeLoad[sl.p.bye] = (byeLoad[sl.p.bye] || 0) + 1; });
+  let pool = avail().filter(p => p.sev !== "out" && marginal(p.pos, open, roster) > 0);
+  // Kicker und Defense kosten spaet nichts und blockieren frueh einen Platz.
+  if (roundOf(n) < 13) pool = pool.filter(p => p.pos !== "K" && p.pos !== "DST");
   const inPlan = pool.filter(p => want.includes(p.pos));
   if (inPlan.length) pool = inPlan;                    // Plan zuerst, sonst bester Gesamtwert
   // Bist du noch nicht dran, ist das eine Vorschau: wer realistisch bis zu
@@ -487,7 +510,11 @@ function recommend(){
     const add = (rank, text) => why.push([rank, text]);
     // Kleiner ist besser. VOR wird in eine ADP-aehnliche Skala gedreht, damit
     // Spieler ohne Projektion (tiefe Bank, K, DEF) vergleichbar bleiben.
-    let sc = p.vorRank ? p.vorRank : p.adp + 40;
+    const mrg = marginal(p.pos, open, roster);
+    // Durch den Grenznutzen teilen: ein Backup-QB rutscht damit um ein
+    // Vielfaches nach hinten, statt nur ein paar Plaetze.
+    let sc = (p.vorRank ? p.vorRank : p.adp + 40) / mrg;
+    if (mrg < 0.5) add(7, "nur Bankwert - " + p.pos + " ist bei dir besetzt");
     if (sv !== null){
       sc += sv * 14;                       // wer knapp durchkommt, ist der dringendere Zug
       if (sv < .55) add(1, "kommt nur mit " + Math.round(sv * 100) + "% bis zu deinem Pick durch");
@@ -499,7 +526,12 @@ function recommend(){
       { sc -= 4; add(2, "Mehrwert von " + Math.round(p.vor) + " Punkten - der Markt zieht ihn " + Math.round(p.adp - p.vorRank) + " Plaetze zu spaet"); }
     if (runPos === p.pos && open[p.pos]) { sc -= 5; add(4, "Run auf " + p.pos + " läuft und du brauchst die Position"); }
     if (runPos && runPos !== p.pos) { sc -= 3; add(5, "die anderen räumen " + runPos + " leer, hier bleibt Wert liegen"); }
-    if (open[p.pos]) { sc -= 6; add(6, "Startplatz " + p.pos + " noch offen"); }
+    if (open[p.pos]) { sc -= 6 / mrg; add(6, "Startplatz " + p.pos + " noch offen"); }
+    const clash = byeLoad[p.bye] || 0;
+    if (clash >= 2 && marginal(p.pos, open, roster) >= 0.85){
+      sc += clash * 6;                       // nur fuer Starter relevant
+      add(8, "Bye " + p.bye + " - dann fehlen dir schon " + clash + " Starter");
+    }
     if (p.sev === "risk") { sc += 8; add(0, "angeschlagen (" + p.injNote + "), trotzdem der beste Zug"); }
     why.sort((a, b) => a[0] - b[0]);
     return { p, sc, why: why.map(w => w[1]), sv };
