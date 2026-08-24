@@ -66,3 +66,19 @@ outp = [i + 1 for i, p in enumerate(ordered) if p.get("sev") == "out"]
 print(f"  dauerhaft Verletzte auf Raengen {min(outp)}-{max(outp)}" if outp else "  keine Verletzten markiert")
 jean = next((i + 1 for i, p in enumerate(ordered) if "Jeanty" in p["name"]), None)
 print(f"  Jeanty auf Rang {jean}")
+
+# Do Not Draft: absichtlich nur die saisonbedrohenden Faelle. Yahoos Liste ist
+# absolut - wer daraufsteht, wird nie autogepickt, egal wie weit er faellt.
+# "Zu teuer bei seiner ADP" gehoert deshalb NICHT hierher, das regelt schon
+# die Rangfolge oben.
+dnd = sorted([p for p in players if p.get("sev") == "out"], key=lambda p: p["adp"])
+dnd_lines = ["rank,name,team,position"]
+for i, p in enumerate(dnd, 1):
+    nm = p.get("alias") or p["name"]
+    pos = "DEF" if p["pos"] == "DST" else p["pos"]
+    dnd_lines.append(f"{i},{nm},{p['team'] or ''},{pos}")
+dnd_out = ROOT / "yahoo_do_not_draft.csv"
+dnd_out.write_text("\n".join(dnd_lines) + "\n")
+print(f"\n{len(dnd)} Spieler -> {dnd_out.name}")
+for p in dnd:
+    print(f"    {p['pos']:<4} {p['name']:<20} {p['injNote']}")

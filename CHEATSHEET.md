@@ -83,8 +83,20 @@ Was die Liste absichert - und was nicht:
 | Jeanty auf 34 statt 24 wegen der Sprunggelenk-Meldung | |
 
 Die Liste ist statisch - sie kennt deinen Kaderstand nicht. Sie ist der
-Fallschirm, nicht das Steuer. Neu erzeugen mit
-`python3 tools/export_predraft.py`.
+Fallschirm, nicht das Steuer.
+
+### Do Not Draft: `yahoo_do_not_draft.csv` - genau 7 Namen
+
+Nabers, Alec Pierce, Kraft, Mahomes, Kittle, Charbonnet, Tank Dell. Alle mit
+Kreuzband, Achillessehne oder PUP - keiner davon hilft dir 2026.
+
+**Bewusst kurz.** Yahoos Do-Not-Draft ist absolut: Wer daraufsteht, wird nie
+gezogen, egal wie tief er faellt. "Zu teuer bei ADP 31" - McMillan, Jaylen
+Warren, Josh Jacobs - gehoert deshalb NICHT auf diese Liste, sondern wird
+schon durch die Rangfolge erledigt. In Runde 12 waeren die drei ein guter Zug,
+und den will man sich nicht verbauen.
+
+Beide Dateien neu erzeugen: `python3 tools/export_predraft.py`
 
 ## Merksaetze
 
