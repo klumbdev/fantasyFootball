@@ -290,6 +290,54 @@ Befunde, die über die erste Prüfrunde hinausgehen:
 `CHEATSHEET.md` fasst das für den Draftabend zusammen: typische Folge und
 Punkte je Slot, Verfügbarkeit von Allen/McBride/Bowers je Slot, Gegnerdossier.
 
+## Ergebnis: Draft vom 24.08.2026
+
+Slot 1 gezogen. Sitzordnung: TeamClaude, peter, Mika, Daniel, Saison-Out,
+Malocher, Tittsburgh Feelers (vormals Lukas), Dominik.
+
+| Pick | | Pick | |
+|---|---|---|---|
+| 1 | Jahmyr Gibbs (RB) | 49 | Jameson Williams (WR) |
+| 16 | Josh Allen (QB) | 64 | Bucky Irving (RB) |
+| 17 | Trey McBride (TE) | 65 | Terry McLaurin (WR) |
+| 32 | Rashee Rice (WR) | 80 | Jaylen Warren (RB) |
+| 33 | Zay Flowers (WR) | 81 | Carnell Tate (WR) |
+| 48 | Travis Etienne (RB) | 96 | Marvin Harrison Jr. (WR) |
+| 97 | Vikings (DEF) | 112 | Chase McLaughlin (K) |
+| 113 | Jonathon Brooks (RB) | | |
+
+**Projizierte Startpunkte: 1655 — Platz 1 von 8.** Vor peter (1616), dem
+Titelverteidiger, und 118 Punkte vor dem letzten Kader.
+
+Kaderform 1 QB / 5 RB / 6 WR / 1 TE / 1 K / 1 DEF — exakt eine der beiden
+Formen, die in 400 Simulationen entstanden.
+
+### Was den Ausschlag gab
+
+**Sieben von acht Teams nahmen einen zweiten Quarterback. Nur dieses nicht.**
+Das ist genau der Fehler, den das Board nach dem Vier-QB-Vorfall strukturell
+ausschliesst — und er kostete jeden Gegner einen Kaderplatz.
+
+Allen ging bei Pick 16 als **erster QB des gesamten Drafts**, McBride bei 17
+als erster TE. Die Simulation hatte Allen zu 48 % vor Pick 16 weg gesehen; er
+kam durch. Der Doppelpack an der Wende holte damit die beiden Spieler mit dem
+zweit- und dritthoechsten VOR im Feld.
+
+Jeanty ging bei Pick 23 an die Tittsburgh Feelers — mit der Sprunggelenks-
+verletzung vom Drafttag, vor der das Briefing gewarnt hatte.
+
+### Was die Liga 2026 anders machte als 2025
+
+| | 2025 | 2026 |
+|---|---|---|
+| erster QB | Pick 11 | Pick 16 |
+| erster TE | Pick 28 | Pick 17 |
+| erster K | Pick 87 | **Pick 59** |
+| erste DEF | Pick 51 | Pick 75 |
+
+Kicker gingen deutlich frueher, Defenses spaeter. Fuer 2027 ist
+`tools/managers_2026.json` die aktuellere Grundlage.
+
 ## Fehler, die aufgetreten sind
 
 Festgehalten, weil sie sich wiederholen können.
