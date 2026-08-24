@@ -281,6 +281,35 @@ for (const p of P.filter(x => x.adp <= 130).filter((_, i) => i % 9 === 0)){
 }
 verdict("Ueberlebenswahrscheinlichkeit faellt monoton", mono);
 
+// Der Vier-QB-Vorfall darf sich nicht wiederholen: sobald eine Position ihre
+// Obergrenze erreicht hat (QB/TE/K/DEF je 1, RB/WR je 6), darf sie in der
+// Empfehlung nie wieder auftauchen - weder vorn noch als Alternative.
+{
+  const FULLCAP = {QB: 1, TE: 1, K: 1, DST: 1, RB: 6, WR: 6};
+  let checked = 0, offenses = 0;
+  for (let run = 0; run < 60; run++){
+    seed = 91000 + run * 11;
+    fresh(1 + run % 8);
+    const cnt = {}; for (let s2 = 1; s2 <= 8; s2++) cnt[s2] = {};
+    for (let pick = 1; pick <= 120; pick++){
+      const seat = seatFor(pick);
+      if (seat === S.slot){
+        const have = {}; myTeam().forEach(p => have[p.pos] = (have[p.pos] || 0) + 1);
+        const r = recommend();
+        if (r) for (const c of [r.top, ...r.alts]){
+          checked++;
+          if ((have[c.p.pos] || 0) >= FULLCAP[c.p.pos]) offenses++;
+        }
+        userPick();
+      } else {
+        oppPick(MG[MGNAMES[(pick + run) % 7]], Math.ceil(pick / 8), cnt[seat], null);
+      }
+    }
+  }
+  verdict("Volle Position wird nie wieder angezeigt (der Vier-QB-Fall)",
+    offenses === 0, checked + " Anzeigen geprueft, " + offenses + " Verstoesse");
+}
+
 const missing = PROBE.filter(nm => !byName[nm]);
 verdict("Alle Schluesselnamen im Datensatz auffindbar", missing.length === 0,
   missing.length ? "fehlt: " + missing.join(", ") : "");
