@@ -47,7 +47,8 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .row{display:grid;grid-template-columns:52px 1fr 62px 74px 128px;gap:10px;
   align-items:center;padding:8px 12px;border-bottom:1px solid var(--line2)}
 .row:last-child{border-bottom:none}
-.row:hover{background:#1b2230}
+.row:hover{background:#1b2230;cursor:pointer}
+.row:active{background:#222b3b}
 .adp{font-size:15px;font-weight:650;color:var(--dim)}
 .nm{font-weight:600;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .meta{font-size:11px;color:var(--faint);margin-top:1px}
@@ -86,6 +87,9 @@ aside h2{margin:0 0 9px;font-size:11px;letter-spacing:.1em;text-transform:upperc
 .need span.urgent{border-color:var(--warn);color:var(--warn);font-weight:650}
 .note{font-size:11px;color:var(--faint);margin-top:8px;line-height:1.5}
 .warnrow{font-size:12px;color:var(--warn);padding:3px 0}
+textarea{width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--line);
+  border-radius:6px;padding:7px 9px;font:12px/1.4 ui-monospace,Menlo,monospace;resize:vertical}
+textarea:focus{outline:none;border-color:var(--accent)}
 .cfg{display:grid;grid-template-columns:1fr 58px;gap:5px 8px;align-items:center;font-size:12px}
 .empty-state{padding:26px;text-align:center;color:var(--faint)}
 #rec{position:sticky;top:58px;z-index:19;background:linear-gradient(90deg,#241c4d,#1a1730);
@@ -145,7 +149,7 @@ aside h2{margin:0 0 9px;font-size:11px;letter-spacing:.1em;text-transform:upperc
 <div class="wrap">
   <main>
     <div class="toolbar">
-      <input id="q" placeholder="Spieler suchen …  (Enter = weg, Shift+Enter = ich)" autocomplete="off">
+      <input id="q" placeholder="Suchen … (Enter = weg) · oder direkt auf eine Zeile klicken" autocomplete="off">
       <button class="tab on" data-p="ALL">Alle</button>
       <button class="tab" data-p="QB">QB</button>
       <button class="tab" data-p="RB">RB</button>
@@ -158,6 +162,14 @@ aside h2{margin:0 0 9px;font-size:11px;letter-spacing:.1em;text-transform:upperc
   </main>
 
   <aside>
+    <section>
+      <h2>Picks abgleichen</h2>
+      <textarea id="sync" rows="3" placeholder="Pickliste aus Yahoo hier einfügen …"></textarea>
+      <div style="display:flex;gap:8px;margin-top:7px;align-items:center">
+        <button id="syncBtn">Übernehmen</button>
+        <span class="note" id="syncNote" style="margin:0"></span>
+      </div>
+    </section>
     <section>
       <h2>Mein Kader</h2>
       <div id="roster"></div>
@@ -312,7 +324,8 @@ function render(){
       (p.ldelta >= 4 ? '<span class="chip early">geht ~' + Math.round(p.ldelta) +
         ' früher</span>' : "");
     html +=
-      '<div class="row' + (p.sev === "out" ? " isout" : "") + '">' +
+      '<div class="row' + (p.sev === "out" ? " isout" : "") +
+        '" onclick="rowClick(event,' + p.id + ')">' +
         '<div class="adp num">' + p.adpFmt + "</div>" +
         '<div><div class="nm">' + p.name +
           '<span class="pos ' + p.pos + '">' + p.pos + p.pos_rank + "</span>" + chips + "</div>" +
@@ -469,6 +482,57 @@ function recommend(){
 }
 const planFor = r => PLAN.find(([a, b]) => r >= a && r <= b) || PLAN[PLAN.length - 1];
 
+/* ---- Eingabe ----
+   Waehrend eines Drafts mit 45 Sekunden pro Pick bleibt keine Zeit, sieben
+   gegnerische Zuege abzutippen. Deshalb zwei schnellere Wege: ein Klick auf
+   die Zeile streicht den Spieler, und die Pickliste aus Yahoo laesst sich
+   als Ganzes einfuegen. */
+function rowClick(ev, id){
+  if (ev.target.tagName === "BUTTON") return;      // die Knoepfe behalten ihre Funktion
+  draft(id, ev.shiftKey);                          // Shift+Klick = das war mein Pick
+}
+
+// Yahoo schreibt Picks als "K. WALKER III  RB - KC". Statt Namen zu zerlegen
+// und zu hoffen, wird fuer jeden Spieler ein Muster gebaut und im Text gesucht.
+// Das haelt "A. BROWN" (A.J. Brown) und "A. ST. BROWN" (Amon-Ra) auseinander.
+const SUFFIX = /\s+(?:Jr\.?|Sr\.?|II|III|IV|V)$/i;
+const esc = t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+function pattern(p){
+  const bits = p.name.replace(SUFFIX, "").split(" ");
+  const initial = bits[0][0];
+  const surname = bits.slice(1).join(" ") || bits[0];
+  // Optionales zweites Initial deckt "A.J. Brown" ab, ohne "A. St. Brown" zu treffen.
+  return new RegExp("\\b" + esc(initial) + "\\.\\s*(?:[A-Za-z]\\.\\s*)?" + esc(surname) + "\\b", "gi");
+}
+
+function syncPicks(text){
+  const pool = avail();
+  const at = new Map();                        // Textposition -> Spieler, die dort passen
+  for (const p of pool){
+    for (const m of text.matchAll(pattern(p))){
+      if (!at.has(m.index)) at.set(m.index, []);
+      at.get(m.index).push(p);
+    }
+  }
+  const hit = [], unclear = [];
+  for (const [pos, list] of at){
+    if (list.length === 1) hit.push(list[0]);
+    else unclear.push(text.substr(pos, 24).split("\n")[0].trim());
+  }
+  // Laengster Treffer gewinnt, wenn sich zwei Muster ueberlappen
+  const done = new Set();
+  let n = 0;
+  for (const p of hit){
+    if (done.has(p.id) || S.drafted[p.id]) continue;
+    done.add(p.id);
+    S.drafted[p.id] = "other";
+    S.order.push(p.id);
+    n++;
+  }
+  return { n, unclear };
+}
+
 /* ---- Bedienung ---- */
 const list = document.getElementById("list"), needsEl = document.getElementById("needs");
 document.querySelectorAll(".tab").forEach(b => b.onclick = () => {
@@ -490,6 +554,17 @@ document.getElementById("reset").onclick = () => {
     S = { drafted:{}, mine:[], order:[], slot:S.slot, v:LINEUP_V, lineup:S.lineup }; save(); render();
   }
 };
+document.getElementById("syncBtn").onclick = () => {
+  const box = document.getElementById("sync");
+  const r = syncPicks(box.value);
+  const note = document.getElementById("syncNote");
+  note.textContent = (r.n ? r.n + " gestrichen" : "nichts Neues erkannt") +
+    (r.unclear.length ? " · unklar, bitte anklicken: " + r.unclear.join(", ") : "");
+  note.style.color = r.unclear.length ? "var(--warn)" : "var(--faint)";
+  box.value = "";
+  save(); render();
+};
+
 const slotSel = document.getElementById("slot");
 const teamSel = document.getElementById("teams");
 function fillSlotOptions(){
