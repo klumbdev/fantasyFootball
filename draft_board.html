@@ -407,7 +407,10 @@ function render(){
     const why = R.top.why.length ? R.top.why[0] : "bester verfügbarer Spieler im Rundenplan";
     recEl.className = mine ? "" : "wait";
     recEl.innerHTML =
-      '<div class="lbl">' + (mine ? "Du bist dran<br>nimm" : "Pick " + next + "<br>in " + (next - n)) + "</div>" +
+      '<div class="lbl">' + (mine
+        ? (myPicks().includes(n + 1) ? "Doppelpick!<br>nimm" : "Du bist dran<br>nimm")
+        : "Pick " + next + (myPicks().includes(next + 1) ? "+" + (next + 1) : "") +
+          "<br>in " + (next - n)) + "</div>" +
       '<div class="mid"><div class="who">' + (p.yname || p.name) +
         ' <span class="pos ' + p.pos + '">' + p.pos + p.pos_rank + "</span></div>" +
         '<div class="why">' + why[0].toUpperCase() + why.slice(1) +
@@ -416,7 +419,8 @@ function render(){
       '<div class="alts">' + R.alts.map(a =>
         '<div class="alt" onclick="draft(' + a.p.id + ',true)">' +
           '<b>' + (a.p.yname || a.p.name) + '</b> <span class="pos ' + a.p.pos + '">' + a.p.pos + a.p.pos_rank + "</span>" +
-          '<span class="ar">' + (a.why[0] || "solide Alternative") + "</span></div>").join("") + "</div>" +
+          '<span class="ar">' + (a.sv != null ? "~" + Math.round(a.sv * 100) + "% noch da"
+            : (a.why[0] || "solide Alternative")) + "</span></div>").join("") + "</div>" +
       '<button onclick="draft(' + p.id + ',true)">nehmen</button>';
   } else recEl.innerHTML = "";
 
