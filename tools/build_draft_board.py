@@ -16,6 +16,7 @@ from pathlib import Path
 TEAMS = 8
 SCORING = "half-ppr"
 SEASON = 2026
+TIER_CAP = 6  # groesste sinnvolle Tier-Laenge fuer die Anzeige
 
 FFC_URL = f"https://fantasyfootballcalculator.com/api/v1/adp/{SCORING}?teams={TEAMS}&year={SEASON}"
 SLEEPER_URL = "https://api.sleeper.app/v1/players/nfl"
@@ -46,15 +47,24 @@ def tier_up(players):
         by_pos.setdefault(p["pos"], []).append(p)
     for pos, group in by_pos.items():
         group.sort(key=lambda x: x["adp"])
+        # A tier break is a gap that is unusually large *for its draft depth*.
+        # Absolute thresholds fail because ADP thins out the deeper you go: two
+        # picks apart is a chasm in round 1 and noise in round 12. Comparing each
+        # gap against the median of its neighbours adapts to that automatically.
         gaps = [b["adp"] - a["adp"] for a, b in zip(group, group[1:])]
-        # A tier break is a gap well above the typical spacing for that position.
-        cut = max(4.0, statistics.median(gaps) * 2.5) if gaps else 4.0
-        tier = 1
+        tier, held = 1, 0
         for i, p in enumerate(group):
-            if i and group[i]["adp"] - group[i - 1]["adp"] >= cut:
-                tier += 1
+            if i:
+                local = gaps[max(0, i - 7):i + 7] or [1.0]
+                natural = gaps[i - 1] >= max(1.0, statistics.median(local) * 2.2)
+                # Some positions run as a smooth curve with no real cliff (RB does
+                # in this format). A tier of 25 tells the drafter nothing, so cap
+                # the run length and split on the widest gap available.
+                if natural or held >= TIER_CAP:
+                    tier, held = tier + 1, 0
             p["tier"] = tier
             p["pos_rank"] = i + 1
+            held += 1
 
 
 def main():
