@@ -128,6 +128,9 @@ aside h2{margin:0 0 9px;font-size:11px;letter-spacing:.1em;text-transform:upperc
   <div class="stat hi"><span>Mein n. Pick</span><b class="num" id="hNext">–</b></div>
   <div class="stat"><span>Board</span><b class="num" id="hLeft">–</b></div>
   <div class="spacer"></div>
+  <label style="font-size:12px;color:var(--dim)">Teams
+    <select id="teams"></select>
+  </label>
   <label style="font-size:12px;color:var(--dim)">Draft-Slot
     <select id="slot"></select>
   </label>
@@ -183,7 +186,8 @@ aside h2{margin:0 0 9px;font-size:11px;letter-spacing:.1em;text-transform:upperc
 
 <script>
 const DATA = /*__DATA__*/null;
-const P = DATA.players, M = DATA.meta, T = M.teams;
+const P = DATA.players, M = DATA.meta;
+let T = M.teams;   // im Kopf umstellbar, damit Mock-Drafts anderer Groesse passen
 const LS = "draftboard_" + M.season + "_" + T;
 
 // Bei Aenderungen an der Startaufstellung hochzaehlen: ein im Browser
@@ -191,8 +195,9 @@ const LS = "draftboard_" + M.season + "_" + T;
 const LINEUP_V = 2;
 const DEFAULT_LINEUP = {QB:1, RB:2, WR:2, TE:1, FLEX:1, K:1, DST:1};
 
-let S = load() || { drafted: {}, mine: [], order: [], slot: 1,
+let S = load() || { drafted: {}, mine: [], order: [], slot: 1, teams: T,
                     v: LINEUP_V, lineup: {...DEFAULT_LINEUP} };
+T = S.teams || M.teams;
 if (S.v !== LINEUP_V) { S.lineup = {...DEFAULT_LINEUP}; S.v = LINEUP_V; }
 
 function load(){ try { return JSON.parse(localStorage.getItem(LS)); } catch(e){ return null; } }
@@ -471,8 +476,17 @@ document.getElementById("reset").onclick = () => {
   }
 };
 const slotSel = document.getElementById("slot");
-for (let i = 1; i <= T; i++) slotSel.add(new Option(i, i));
-slotSel.value = S.slot;
+const teamSel = document.getElementById("teams");
+function fillSlotOptions(){
+  slotSel.innerHTML = "";
+  for (let i = 1; i <= T; i++) slotSel.add(new Option(i, i));
+  if (S.slot > T) S.slot = T;
+  slotSel.value = S.slot;
+}
+for (let i = 4; i <= 16; i++) teamSel.add(new Option(i, i));
+teamSel.value = T;
+teamSel.onchange = e => { T = S.teams = +e.target.value; fillSlotOptions(); save(); render(); };
+fillSlotOptions();
 slotSel.onchange = e => { S.slot = +e.target.value; save(); render(); };
 
 const cfgEl = document.getElementById("cfg");
@@ -483,7 +497,7 @@ cfgEl.querySelectorAll("input").forEach(i => i.onchange = e => {
 });
 document.getElementById("src").innerHTML =
   "<b>Football Fanatics 2</b> · QB/WR/WR/RB/RB/TE/FLEX/K/DEF + 6 Bank · 15 Runden · 45 s pro Pick<br><br>" +
-  M.scoring + " · " + T + " Teams · ADP aus " + M.drafts.toLocaleString("de-DE") +
+  M.scoring + " · ADP aus " + M.drafts.toLocaleString("de-DE") +
   " Drafts (" + M.window + "), allgemeine Half-PPR-ADP - nicht nach Ligagroesse gefiltert. " +
   "Prozent = Wahrscheinlichkeit, dass der Spieler bis zu deinem naechsten Pick noch da ist.<br><br>" +
   "Achtung: eure Liga gibt <b>6 Punkte pro Pass-TD</b> (Yahoo-Standard: 4) und <b>-2 pro Interception</b>. " +
