@@ -263,6 +263,33 @@ Saison, gut 17 pro Woche, und er ist über alle acht Slots stabil.
 | T. McBride | 4 | 2 | 4 |
 | B. Bowers | 4 | 4 | 14 |
 
+### Zweite Prüfrunde: gegen die echten Gegner
+
+`node tools/test_suite.js` — 17 Prüfungen, alle bestanden. Kern: Die Gegner
+sind hier keine ADP-Automaten mehr, sondern **Profile der acht Manager aus dem
+2025er-Draft** (`tools/managers_2025.json`); die Sitzordnung wird je Lauf neu
+verlost, weil sie dieses Jahr anders ausfällt.
+
+Befunde, die über die erste Prüfrunde hinausgehen:
+
+- **Szenarien**: RB-Run → Chase+Nacua in 20/20 Fällen; QB-Run → kein
+  Panikgriff (QB im Median R7, kein Punktverlust); TE-Leerlauf → nur −6
+  Punkte, die TE-Klippe ist klein; jede Erstempfehlung weggeschnappt →
+  4,8 Punkte je Wegschnappen; Verletzungswelle → Elite wird nicht gemieden.
+- **A/B**: Keine feste Regel schlägt die freie Entscheidung. QB in R2
+  erzwingen kostet 16 Punkte, QB-Verbot bis R8 nur 5 — QB-Timing ist ein
+  kleiner Hebel. TE-Verbot bis R8 kostet 19 — **TE früh zählt mehr als QB
+  früh.** Das Startmuster ist slotabhängig: RB-RB ist bei Slot 1 gut und bei
+  Slot 8 schlecht (−43), WR-WR umgekehrt.
+- **Replay**: Die eigene 2025er-Reihenfolge (QB R3, DEF R13, K R14) verliert
+  **105 Punkte** gegen das Board; stur-bester-VOR verliert 34.
+- **Bye-Logik**: Drei Starter in derselben Bye-Woche in 19 % der Drafts
+  gegenüber 41 % ohne die Logik.
+- Laufzeit `recommend()`: 0,7 ms — die 45-Sekunden-Uhr ist kein Thema.
+
+`CHEATSHEET.md` fasst das für den Draftabend zusammen: typische Folge und
+Punkte je Slot, Verfügbarkeit von Allen/McBride/Bowers je Slot, Gegnerdossier.
+
 ## Fehler, die aufgetreten sind
 
 Festgehalten, weil sie sich wiederholen können.

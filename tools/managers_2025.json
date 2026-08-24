@@ -1,0 +1,33 @@
+{
+  "_source": "Draftboard 2025, Football Fanatics 2. Positionsfolge je Manager, Runde 1 bis 15, aus dem Snake rekonstruiert (Reihenfolge 2025: Mika, Daniel, Dominik, Lukas, peter, Malocher, Saison-Out, Oureweller).",
+  "_note": "Die Profile modellieren die Gegner in der Simulation: mit hoher Wahrscheinlichkeit nimmt ein Manager in Runde r wieder die Position, die er 2025 in Runde r nahm, sonst eine aus der Liga-Rundenverteilung.",
+  "user": "Oureweller Simble",
+  "profiles": {
+    "Mika":      ["WR","RB","QB","TE","WR","RB","RB","WR","RB","QB","DST","WR","TE","RB","K"],
+    "Daniel":    ["RB","WR","WR","WR","QB","TE","RB","WR","WR","QB","DST","K","K","TE","TE"],
+    "Dominik":   ["RB","RB","WR","TE","QB","WR","DST","RB","WR","WR","RB","TE","K","QB","RB"],
+    "Lukas":     ["WR","WR","RB","RB","WR","WR","RB","QB","WR","TE","WR","RB","RB","K","DST"],
+    "peter":     ["RB","WR","RB","TE","WR","RB","RB","WR","QB","WR","WR","K","TE","K","DST"],
+    "Malocher":  ["RB","QB","RB","RB","WR","WR","TE","DST","WR","RB","WR","K","DST","K","WR"],
+    "SaisonOut": ["RB","WR","RB","RB","QB","TE","WR","DST","WR","WR","K","TE","RB","K","WR"]
+  },
+  "userProfile2025": ["WR","RB","QB","WR","RB","WR","TE","RB","RB","WR","QB","WR","DST","K","RB"],
+  "standings2025": {
+    "peter": 1, "SaisonOut": 2, "Lukas": 3, "Mika": 4,
+    "Oureweller": 5, "Dominik": 6, "Daniel": 7, "Malocher": 8
+  },
+  "points2025": {
+    "peter": 2374.98, "SaisonOut": 2235.52, "Lukas": 2189.10, "Mika": 2071.62,
+    "Oureweller": 2047.20, "Dominik": 1972.72, "Daniel": 1962.60, "Malocher": 1634.66
+  },
+  "notable": {
+    "Mika":      "QB Allen R3, Zweit-QB Nix R10. TE McBride R4 und Tyler Warren R13. DEF Eagles R11.",
+    "Daniel":    "Drei TEs, zwei Kicker (R12 und R13). QBs Love R5 und Fields R10.",
+    "Dominik":   "Frueheste DEF der Liga (Broncos, R7). QBs Hurts R5 und Kyler R14.",
+    "Lukas":     "Erster QB erst R8 (Mayfield). Frueh massiv WR.",
+    "peter":     "Meister. QB erst R9 (Mahomes), TE Bowers R4, zwei Kicker.",
+    "Malocher":  "Fruehester QB der Liga (Lamar, R2). Zwei DEF, zwei Kicker. Letzter Platz.",
+    "SaisonOut": "Erster Kicker der Liga (Boswell, R11). QB Burrow R5. Vizemeister.",
+    "Oureweller": "Du: QB Daniels R3 plus Prescott R11, DEF R13, K R14. Platz 5."
+  }
+}
