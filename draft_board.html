@@ -148,8 +148,14 @@ const DATA = {"meta": {"teams": 8, "scoring": "Half-PPR", "season": 2026, "draft
 const P = DATA.players, M = DATA.meta, T = M.teams;
 const LS = "draftboard_" + M.season + "_" + T;
 
+// Bei Aenderungen an der Startaufstellung hochzaehlen: ein im Browser
+// gespeicherter Draft behaelt sonst die alte, inzwischen falsche Aufstellung.
+const LINEUP_V = 2;
+const DEFAULT_LINEUP = {QB:1, RB:2, WR:2, TE:1, FLEX:1, K:1, DST:1};
+
 let S = load() || { drafted: {}, mine: [], order: [], slot: 1,
-                    lineup: {QB:1, RB:2, WR:2, TE:1, FLEX:1, K:1, DST:1} };
+                    v: LINEUP_V, lineup: {...DEFAULT_LINEUP} };
+if (S.v !== LINEUP_V) { S.lineup = {...DEFAULT_LINEUP}; S.v = LINEUP_V; }
 
 function load(){ try { return JSON.parse(localStorage.getItem(LS)); } catch(e){ return null; } }
 function save(){ try { localStorage.setItem(LS, JSON.stringify(S)); } catch(e){} }
@@ -174,7 +180,11 @@ function erf(x){
   return s * y;
 }
 const cdf = (x, mu, sd) => 0.5 * (1 + erf((x - mu) / (Math.max(sd, 0.1) * Math.SQRT2)));
-function survival(p, n){ return n ? Math.max(0, Math.min(1, 1 - cdf(n - 0.5, p.adp, p.stdev))) : null; }
+function survival(p, n){
+  if (!n) return null;
+  const taken = cdf(n - 0.5, p.adp, p.stdev) - cdf(0.5, p.adp, p.stdev);
+  return Math.max(0, Math.min(1, 1 - taken / Math.max(1e-9, 1 - cdf(0.5, p.adp, p.stdev))));
+}
 
 /* ---- Zustand ---- */
 const avail = () => P.filter(p => !S.drafted[p.id]);
@@ -324,7 +334,7 @@ q.onkeydown = e => {
 document.getElementById("undo").onclick = undo;
 document.getElementById("reset").onclick = () => {
   if (confirm("Draft wirklich zuruecksetzen?")){
-    S = { drafted:{}, mine:[], order:[], slot:S.slot, lineup:S.lineup }; save(); render();
+    S = { drafted:{}, mine:[], order:[], slot:S.slot, v:LINEUP_V, lineup:S.lineup }; save(); render();
   }
 };
 const slotSel = document.getElementById("slot");
