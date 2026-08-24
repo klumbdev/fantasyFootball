@@ -17,3 +17,10 @@ __pycache__/
 node_modules/
 venv/
 .venv/
+
+# Von Yahoo gespeicherte Seiten und Netzwerkmitschnitte - gross und personenbezogen
+*.har
+Live NFL Draft*.html
+*YOUR TURN*.html
+*_files/
+tools/projections.json
